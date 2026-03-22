@@ -1,0 +1,9 @@
+# Project Aegis Root gitignore
+
+# Ignore generated test payload files
+*.bin
+benchmark_files/
+test_files/
+
+# Temporary files created by scripts
+temp_*.bin
