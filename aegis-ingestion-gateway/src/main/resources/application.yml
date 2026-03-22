@@ -1,0 +1,22 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: aegis-ingestion-gateway
+  kafka:
+    bootstrap-servers: localhost:9092
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+  servlet:
+    multipart:
+      max-file-size: 2GB
+      max-request-size: 2GB
+      enabled: true
+
+minio:
+  url: http://localhost:9000
+  access-key: aegis_admin
+  secret-key: aegis_password
+  bucket-name: aegis-raw-docs

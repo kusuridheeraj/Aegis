@@ -1,0 +1,58 @@
+version: '3.8'
+
+services:
+  # MinIO Object Storage
+  minio:
+    image: minio/minio:latest
+    container_name: aegis-minio
+    ports:
+      - "9000:9000" # API Port
+      - "9001:9001" # Web UI Port
+    environment:
+      MINIO_ROOT_USER: "aegis_admin"
+      MINIO_ROOT_PASSWORD: "aegis_password"
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio_data:/data
+    restart: unless-stopped
+
+  # MinIO setup container to automatically create the bucket
+  minio-create-bucket:
+    image: minio/mc
+    container_name: aegis-minio-setup
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -c "
+      until (/usr/bin/mc config host add myminio http://minio:9000 aegis_admin aegis_password) do echo '...waiting...' && sleep 1; done;
+      /usr/bin/mc mb myminio/aegis-raw-docs;
+      /usr/bin/mc policy set public myminio/aegis-raw-docs;
+      exit 0;
+      "
+
+  # Apache Kafka (KRaft Mode)
+  kafka:
+    image: bitnami/kafka:latest
+    container_name: aegis-kafka
+    ports:
+      - "9092:9092"
+      - "9093:9093"
+    environment:
+      # KRaft mode variables
+      - KAFKA_ENABLE_KRAFT=yes
+      - KAFKA_CFG_PROCESS_ROLES=broker,controller
+      - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092,CONTROLLER://:9093
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://localhost:9092
+      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=1@kafka:9093
+      - KAFKA_CFG_NODE_ID=1
+      - KAFKA_AUTO_CREATE_TOPICS_ENABLE=true
+      - ALLOW_PLAINTEXT_LISTENER=yes
+    volumes:
+      - kafka_data:/bitnami/kafka
+    restart: unless-stopped
+
+volumes:
+  minio_data:
+  kafka_data:
