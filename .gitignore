@@ -7,3 +7,13 @@ test_files/
 
 # Temporary files created by scripts
 temp_*.bin
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.env
+
+# Logs
+*.log

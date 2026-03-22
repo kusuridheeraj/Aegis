@@ -1,0 +1,6 @@
+fastapi[standard]
+kafka-python-ng
+minio==7.2.5
+qdrant-client==1.8.0
+sentence-transformers==2.5.1
+mcp
