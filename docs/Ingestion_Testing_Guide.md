@@ -1,6 +1,6 @@
-# Testing Project Aegis: Week 1 Execution Guide
+# Testing Project Aegis: Execution Guide
 
-This guide provides step-by-step instructions to test the Enterprise Ingestion Gateway you built in Week 1. This proves that your Spring Boot application successfully streams large files to MinIO and publishes events to Apache Kafka without crashing the JVM.
+This guide provides step-by-step instructions to test the Enterprise Ingestion Gateway. This proves that your Spring Boot application successfully streams large files to MinIO and publishes events to Apache Kafka without crashing the JVM.
 
 ## Prerequisites
 Ensure Docker Desktop is running and your infrastructure is up:

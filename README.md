@@ -19,21 +19,48 @@ This project demonstrates a Staff-level architecture bridging a heavy Java JVM b
 * **Vector DB (WIP):** pgvector / Qdrant
 * **Deployment:** Docker, Docker Compose
 
+## Architecture Diagram
+```mermaid
+graph TD;
+    Client((Client)) -->|Upload Document| SpringBoot[Spring Boot Gateway];
+    SpringBoot -->|1. Stream File Bytes| MinIO[(MinIO Object Store)];
+    MinIO -.->|2. Returns objectId| SpringBoot;
+    SpringBoot -->|3. Publish DocumentIngestedEvent| Kafka[[Apache Kafka Event Bus]];
+    SpringBoot -.->|4. HTTP 202 Accepted| Client;
+    Kafka -->|5. Consume Event| FastAPI[FastAPI AI Service];
+    FastAPI -->|6. Fetch File via objectId| MinIO;
+    FastAPI -->|7. Generate Vector Embeddings| LLM((HuggingFace LLM));
+    LLM -.->|8. Return Embeddings| FastAPI;
+    FastAPI -->|9. Store Vectors| VectorDB[(Vector Database)];
+    MCPServer[MCP Interface] -->|Query Context| FastAPI;
+    AIAgent((Claude/AI Agent)) -->|Native Query Protocol| MCPServer;
+
+    classDef java fill:#b07219,stroke:#333,stroke-width:2px,color:#fff;
+    classDef python fill:#3572A5,stroke:#333,stroke-width:2px,color:#fff;
+    classDef storage fill:#154c79,stroke:#333,stroke-width:2px,color:#fff;
+    classDef queue fill:#e35d25,stroke:#333,stroke-width:2px,color:#fff;
+    
+    class SpringBoot java;
+    class FastAPI python;
+    class MinIO,VectorDB storage;
+    class Kafka queue;
+```
+
 ## Modules
 
-### Week 1: The Enterprise Backbone (Ingestion & Streaming)
+### Phase 1: The Enterprise Backbone (Ingestion & Streaming)
 * Implemented a Spring Boot microservice acting as the ingestion gateway.
 * Utilizes the **Claim Check Pattern** to handle large file uploads without blocking threads or crashing the JVM.
 * Files are streamed directly to MinIO, and a lightweight `DocumentIngestedEvent` is published to a Kafka topic (`aegis.documents.raw`).
 
-### Week 2: The AI Brain (Real-Time Processing & MCP) - *In Progress*
+### Phase 2: The AI Brain (Real-Time Processing & MCP) - *In Progress*
 * FastAPI service consuming the Kafka stream in real-time.
 * Real-time vector indexing and protocol-driven design (MCP).
 
-### Week 3: High Availability & Deployment - *Upcoming*
+### Phase 3: High Availability & Deployment - *Upcoming*
 * Full container orchestration, fault tolerance, and system observability.
 
-## How to Run (Week 1 Infrastructure)
+## How to Run (Infrastructure)
 
 1. Start the infrastructure (Kafka, MinIO):
    ```bash

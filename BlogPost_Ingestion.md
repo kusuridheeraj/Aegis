@@ -4,7 +4,7 @@ If you ask an AI or a junior engineer how to handle a file upload in Spring Boot
 
 When you're dealing with a 50KB profile picture, that works. But when you are building an Enterprise system tasked with ingesting massive documents or millions of telemetry logs? **That synchronous approach will cause a JVM death spiral.**
 
-This week, while building the ingestion gateway for **Project Aegis** (a distributed enterprise RAG engine), I needed to prove exactly *why* naive uploads fail under load, and how to architect a system that physically cannot run out of memory. 
+While building the ingestion gateway for **Project Aegis** (a distributed enterprise RAG engine), I needed to prove exactly *why* naive uploads fail under load, and how to architect a system that physically cannot run out of memory. 
 
 I didn't just read about it. I built it, benchmarked it on my local machine, and here is exactly what the data showed.
 
@@ -65,6 +65,6 @@ If you are transitioning from standard feature development to building high-avai
 
 🔗 **[https://github.com/kusuridheeraj/Aegis](https://github.com/kusuridheeraj/Aegis)**
 
-*Next week: I’ll be building the Python FastAPI AI brain that consumes this Kafka stream to generate real-time vector embeddings.*
+*Next: I’ll be building the Python FastAPI AI brain that consumes this Kafka stream to generate real-time vector embeddings.*
 
 #SystemDesign #Architecture #SpringBoot #Kafka #DataEngineering #StaffEngineer
