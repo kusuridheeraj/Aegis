@@ -79,6 +79,8 @@ If you are transitioning from standard feature development to building high-avai
 
 🔗 **[https://github.com/kusuridheeraj/Aegis](https://github.com/kusuridheeraj/Aegis)**
 
+*(Note: If you run the benchmarks, spot an issue, or see a way to optimize the architecture further, please feel free to open an Issue or raise a PR! I am actively building this in public and welcome code reviews from other engineers.)*
+
 *Next: I’ll be building the Python FastAPI AI brain that consumes this Kafka stream to generate real-time vector embeddings.*
 
 #SystemDesign #Architecture #SpringBoot #Kafka #DataEngineering #StaffEngineer
