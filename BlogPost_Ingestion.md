@@ -65,7 +65,13 @@ To survive that, you must evolve the architecture again to use **Direct-to-S3 Pr
 
 I built this project so that any engineer can clone it, spin up the Docker containers, and test the architectural limits on their own machine. 
 
-In my repository, I've included a PowerShell script that instantly generates a massive 1GB dummy payload (`.\scripts\generate_test_files.ps1`). You can fire this at the local Spring Boot endpoint using `curl` and watch the 12ms latency happen in real-time. 
+In my repository, I've included a custom PowerShell script (`.\scripts\generate_test_files.ps1`) to handle the load generation. 
+
+**Why a custom `.ps1` script instead of just downloading a test file or using Postman?**
+1. **Speed & Efficiency:** Downloading a 1GB dummy file wastes bandwidth and time. The PowerShell script uses the OS-native `fsutil` to instantly allocate a 1GB block of empty space on your local disk in less than a second. 
+2. **Zero Dependencies:** By using a native OS script, anyone testing this repository doesn't need to install heavy external testing clients. You clone the repo, run the script, and you instantly have the exact byte-sized payloads required.
+
+You can fire this payload at the local Spring Boot endpoint using `curl` and watch the 12ms latency happen in real-time. 
 
 Because testing with gigabytes of data will quickly fill your hard drive, I have also included strict cleanup commands to purge your local `.bin` files and forcefully empty the MinIO Docker volumes when you are done. 
 
