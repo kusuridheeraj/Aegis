@@ -61,7 +61,15 @@ At that scale, pushing 10 Petabytes of bandwidth through your Spring Boot server
 
 To survive that, you must evolve the architecture again to use **Direct-to-S3 Pre-Signed URLs**. The client asks Spring Boot for a cryptographic URL, and the client uploads the 1GB file *directly* to the cloud storage bucket, completely bypassing the application servers. The storage bucket then triggers the Kafka event natively. 
 
-If you are transitioning from standard feature development to building high-availability distributed systems, you can pull my raw architecture, the Docker infrastructure, and the benchmark configurations for Project Aegis on my GitHub here: 
+### How to Test This Yourself (And Clean Up)
+
+I built this project so that any engineer can clone it, spin up the Docker containers, and test the architectural limits on their own machine. 
+
+In my repository, I've included a PowerShell script that instantly generates a massive 1GB dummy payload (`.\scripts\generate_test_files.ps1`). You can fire this at the local Spring Boot endpoint using `curl` and watch the 12ms latency happen in real-time. 
+
+Because testing with gigabytes of data will quickly fill your hard drive, I have also included strict cleanup commands to purge your local `.bin` files and forcefully empty the MinIO Docker volumes when you are done. 
+
+If you are transitioning from standard feature development to building high-availability distributed systems, you can pull my raw architecture, the testing scripts, and the step-by-step Execution Guide on my GitHub here: 
 
 🔗 **[https://github.com/kusuridheeraj/Aegis](https://github.com/kusuridheeraj/Aegis)**
 

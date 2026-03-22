@@ -60,18 +60,14 @@ graph TD;
 ### Phase 3: High Availability & Deployment - *Upcoming*
 * Full container orchestration, fault tolerance, and system observability.
 
-## How to Run (Infrastructure)
+## How to Run & Test (Infrastructure)
 
-1. Start the infrastructure (Kafka, MinIO):
-   ```bash
-   docker-compose up -d
-   ```
-2. Start the Spring Boot Gateway:
-   ```bash
-   cd aegis-ingestion-gateway
-   ./mvnw spring-boot:run
-   ```
-3. Test a large upload:
-   ```bash
-   curl -X POST -F "file=@docker-compose.yml" http://localhost:8080/api/v1/documents
-   ```
+To properly test the architecture, we generate massive (1GB+) dummy payloads to prove the Claim Check pattern handles extreme scale without crashing the JVM memory.
+
+**Step-by-Step Execution:**
+Please follow the detailed **[Ingestion Testing Guide](docs/Ingestion_Testing_Guide.md)** located in the `docs` folder. It covers:
+1. Spinning up the Docker infrastructure (Kafka & MinIO).
+2. Starting the Spring Boot Gateway.
+3. Using the included `.\scripts\generate_test_files.ps1` to instantly create 500MB and 1GB payloads.
+4. Uploading the payload via `curl` and verifying the millisecond latency.
+5. **Crucial:** Cleaning up the massive local files and clearing the MinIO Docker volumes to free up disk space.
