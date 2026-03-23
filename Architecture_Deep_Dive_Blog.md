@@ -1,14 +1,16 @@
-# Defending the Architecture: Why I Used Kafka, LangGraph, and MCP to Build an Enterprise RAG Engine
+# From 2GB Payloads to Autonomous Agents: Defending an Enterprise RAG Architecture
 
-When I posted the initial ingestion architecture for **Project Aegis** last week, a senior engineer left a comment that gets to the heart of distributed systems design. 
+In my previous post, [The 2GB Payload Problem](https://github.com/kusuridheeraj/Aegis/blob/main/BlogPost_Ingestion.md), I broke down how I used the Claim Check pattern in Spring Boot to drop API ingestion latency from 32 seconds to 12 milliseconds. 
 
-He looked at my Spring Boot -> MinIO -> Apache Kafka pipeline and asked: *"Isn't using Kafka to handle a file upload massive overkill?"*
+By streaming massive files directly to MinIO and passing a lightweight event token through Apache Kafka, the system could ingest gigabytes of data without ever threatening the JVM's heap memory. 
 
-If I were building a toy RAG application, he would be absolutely right. A simple synchronous HTTP call from the web server to a Python script is faster to build. But Project Aegis isn't a toy. It is a distributed, event-driven context engine designed to ingest 1GB+ payloads without crashing the JVM, vectorize them, and expose them to autonomous AI agents. 
+But getting a 2GB payload *into* the system safely is only half the battle. How do you actually process 150,000 pages of text, extract the semantic meaning, and expose it to an AI without bankrupting your company on API token costs or causing massive LLM hallucinations?
 
-When you build for that scale, you don't use Kafka to move the file. You use Kafka to move the *event*. 
+When I posted that initial ingestion architecture, a senior engineer left a comment that gets to the heart of distributed systems design. He looked at the Spring Boot -> MinIO -> Kafka pipeline and asked: *"Isn't using Kafka to handle a file upload massive overkill?"*
 
-Here is a deep dive into the architectural trade-offs I made in Project Aegis, why I replaced my naive chunking with LangChain, and why I built a headless LangGraph agent instead of relying on Claude Desktop.
+If I were building a toy RAG application, he would be absolutely right. A simple synchronous HTTP call from the web server to a Python script is faster to build. But Project Aegis isn't a toy. It is a distributed, event-driven context engine. When you build for extreme scale, you don't use Kafka to move the file. You use Kafka to move the *event*. 
+
+Here is a deep dive into the architectural trade-offs I made in Phase 2 of Project Aegis, why I replaced naive text chunking with LangChain, and why I built a headless LangGraph agent instead of relying on consumer GUIs like Claude Desktop.
 
 ---
 
