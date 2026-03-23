@@ -4,7 +4,7 @@
 
 Aegis is a high-throughput, real-time event processing system designed to ingest massive amounts of data (documents, logs, etc.), semantically index them on the fly, and expose this "living memory" to AI agents using the Model Context Protocol (MCP).
 
-This project demonstrates a Staff-level architecture bridging a heavy Java JVM backend with a high-speed Python ML service, designed for high availability, low latency, and heavy data workloads.
+This project demonstrates an event-driven architecture bridging a Java JVM ingestion backend with a Python ML service, designed for high availability, low latency, and heavy data workloads using the Claim Check pattern.
 
 ## Architecture Highlights
 * **The Heavy Lifter (Java / Spring Boot):** Acts as the API Gateway and Orchestrator. Handles massive document uploads using the **Claim Check Pattern**, streaming payloads to MinIO and publishing lightweight events to Apache Kafka.
