@@ -47,13 +47,13 @@ Instead of reading all 1GB into memory at once, the system reads the incoming ne
 
 ### Why This Matters in the Real World
 
-This is a core concept that separates standard development from Staff-level architecture:
+This is a core concept that separates standard development from highly scalable architecture:
 
 1. **Cost:** By keeping the heap usage flat at ~250MB regardless of file size, organizations don't need to throw 256GB RAM servers at an API. They can run this API on tiny, cheap 512MB Docker containers in Kubernetes, scaling them horizontally infinitely.
 2. **Blast Radius Reduction:** In the naive approach, if one user uploads a massive 4K video, they crash the JVM, taking down the API for everyone else currently connected to that node. With Claim Check, huge files never threaten JVM stability.
 3. **Decoupling:** Once the file is in MinIO and the event is in Kafka, 5 different downstream services (AI indexing, Virus scanning, Thumbnail generation) can all process that file independently, at their own speed, without hanging the user's browser window.
 
-### The Staff-Level Horizon: Scaling to 10 Million Hits/Sec
+### The Extreme Scale Horizon: Scaling to 10 Million Hits/Sec
 
 The Claim Check pattern handles standard enterprise traffic flawlessly. But what if we needed to handle **10 million concurrent 1GB uploads**? 
 
@@ -83,4 +83,4 @@ If you are transitioning from standard feature development to building high-avai
 
 *Next: I’ll be building the Python FastAPI AI brain that consumes this Kafka stream to generate real-time vector embeddings.*
 
-#SystemDesign #Architecture #SpringBoot #Kafka #DataEngineering #StaffEngineer
+#SystemDesign #Architecture #SpringBoot #Kafka #DataEngineering #DistributedSystems

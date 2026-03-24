@@ -12,7 +12,7 @@ Here is how I used Docker and Docker Compose to define strict service boundaries
 
 Prior to this phase, the Aegis architecture relied on starting a Spring Boot application in one terminal and a Python FastAPI worker in another, while a local Docker Compose file handled the backing infrastructure (Kafka, MinIO, Qdrant). 
 
-While functional for local testing, this approach violates several core tenets of Staff-level engineering:
+While functional for local testing, this approach violates several core tenets of production-grade engineering:
 1. **Environment Parity:** "It works on my machine" is unacceptable. Local installations of Python 3.13 and Java 17 carry OS-specific artifacts (like C++ compiler requirements for ML libraries) that do not translate to cloud environments.
 2. **Statelessness:** Running applications directly on the host OS makes horizontal scaling incredibly difficult.
 3. **Network Isolation:** The services were communicating over `localhost`, exposing them to port conflicts and host-level network disruptions.
@@ -59,6 +59,6 @@ By aggressively decoupling the I/O-heavy ingestion gateway from the CPU-heavy ve
 
 You can view the complete source code, the Docker configuration, and the interactive architecture diagram on my portfolio:
 
-🔗 **[Kusuri Dheeraj Kumar | Staff Software Engineer](https://kusuridheeraj.github.io/portfolio/)**
+🔗 **[Kusuri Dheeraj Kumar | Distributed Systems](https://github.com/kusuridheeraj)**
 
 #Docker #Microservices #SystemDesign #SpringBoot #Python #SoftwareArchitecture

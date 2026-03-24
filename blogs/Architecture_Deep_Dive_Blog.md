@@ -86,4 +86,4 @@ You can review the complete dual-stack architecture, the Docker configuration, a
 
 *(Note: If you run the system locally, spot a bottleneck, or see a way to optimize the pipeline further, please feel free to open an Issue or raise a PR.)*
 
-#SystemDesign #Architecture #MachineLearning #LangChain #Kafka #StaffEngineer
+#SystemDesign #Architecture #MachineLearning #LangChain #Kafka #DistributedSystems

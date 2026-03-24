@@ -1,13 +1,13 @@
 # Scaling Aegis: 10 Million Hits/Second with 1GB Uploads
 
-Your current architecture successfully implements the Claim Check pattern to decouple heavy uploads from processing. However, if you are targeting Staff-level (SDE-3) engineering interviews at top-tier companies, you need to understand the physical and theoretical limits of your architecture.
+Your current architecture successfully implements the Claim Check pattern to decouple heavy uploads from processing. However, if you are building for extreme scale at top-tier companies, you need to understand the physical and theoretical limits of your architecture.
 
 What happens if you scale this to **10,000,000 requests per second**, where each request is a **1GB file**?
 
 Let's break down the math, the inevitable bottlenecks, the testing strategy, and the architectural overhauls required to survive this apocalyptic load.
 
 ## The Reality Check (The Math)
-Before writing code, Staff engineers do napkin math:
+Before writing code, systems engineers do napkin math:
 * **Payload:** 1GB per request.
 * **Throughput:** 10,000,000 requests per second.
 * **Bandwidth Required:** 10,000,000 GB/sec = **10 Petabytes per second**.
