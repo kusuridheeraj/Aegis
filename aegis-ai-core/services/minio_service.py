@@ -26,8 +26,19 @@ def download_document(object_id: str) -> bytes:
         data = response.read()
         return data
     except S3Error as e:
-        logger.error(f"MinIO error occurred: {e}")
+        logger.error(f"MinIO error occurred during download: {e}")
         raise
     finally:
         response.close()
         response.release_conn()
+
+def delete_document(object_id: str):
+    """
+    Garbage Collection: Removes the raw binary file from MinIO to save storage
+    space once the semantic vectors have been safely stored in Qdrant.
+    """
+    try:
+        minio_client.remove_object(MINIO_BUCKET, object_id)
+    except S3Error as e:
+        logger.error(f"Failed to delete {object_id} from MinIO: {e}")
+        raise

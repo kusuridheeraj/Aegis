@@ -3,7 +3,7 @@ import logging
 import traceback
 from kafka import KafkaConsumer, KafkaProducer
 from config import KAFKA_BOOTSTRAP_SERVERS, KAFKA_TOPIC, KAFKA_DLQ_TOPIC
-from services.minio_service import download_document
+from services.minio_service import download_document, delete_document
 from services.embedding_service import extract_text, chunk_text, generate_embeddings
 from services.qdrant_service import store_vectors
 
@@ -75,6 +75,10 @@ def start_consuming():
             # 5. Store in Qdrant
             store_vectors(object_id, chunks, embeddings, correlation_id)
             logger.info(f"[{correlation_id}] Successfully processed and indexed {object_id}")
+
+            # 6. Garbage Collection
+            delete_document(object_id)
+            logger.info(f"[{correlation_id}] Embeddings complete. Purged raw binary from MinIO.")
 
         except Exception as e:
             error_details = str(e)
