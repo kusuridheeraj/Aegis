@@ -1,6 +1,6 @@
-# Project Aegis: Architecture Decision Records (ADR)
+# Aegis: Architecture Decision Records (ADR)
 
-This document serves as the definitive guide to the architectural choices, trade-offs, and design patterns utilized in **Project Aegis**. As an open-source Enterprise RAG (Retrieval-Augmented Generation) Engine, Aegis is built on first principles of distributed systems design. 
+This document serves as the definitive guide to the architectural choices, trade-offs, and design patterns utilized in **Aegis**. As an open-source Enterprise RAG (Retrieval-Augmented Generation) Engine, Aegis is built on first principles of distributed systems design. 
 
 For every major component, we evaluated the "standard" or naive approach against the enterprise requirements of high availability, fault tolerance, and cost efficiency.
 

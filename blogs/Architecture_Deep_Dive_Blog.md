@@ -6,7 +6,7 @@ By streaming massive files directly to MinIO and passing a lightweight event tok
 
 But getting a 2GB payload *into* the system safely is only half the battle. How do you actually process 150,000 pages of text, extract the semantic meaning, and expose it to an AI without bankrupting your company on API token costs, losing data during crashes, or causing massive LLM hallucinations?
 
-Here is a deep dive into the architectural trade-offs I made in Phase 2 of Project Aegis, why I ripped out my naive text chunking for LangChain, and how I hardened the pipeline with Dead Letter Queues and Distributed Tracing.
+Here is a deep dive into the architectural trade-offs I made in Phase 2 of Aegis, why I ripped out my naive text chunking for LangChain, and how I hardened the pipeline with Dead Letter Queues and Distributed Tracing.
 
 ---
 

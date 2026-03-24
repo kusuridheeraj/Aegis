@@ -20,7 +20,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="Aegis AI Core",
-    description="Vector Embedding & Model Context Protocol (MCP) Server for Project Aegis",
+    description="Vector Embedding & Model Context Protocol (MCP) Server for Aegis",
     version="1.0.0",
     lifespan=lifespan
 )

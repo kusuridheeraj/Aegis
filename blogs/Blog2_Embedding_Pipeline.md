@@ -1,6 +1,6 @@
 # The 62MB JSON Payload: Lessons in Distributed Bugs, Semantic Chunking, and Vector Pipelines
 
-In my previous post, I detailed how Project Aegis—an enterprise Retrieval-Augmented Generation (RAG) engine—uses the Claim Check pattern in Spring Boot to ingest 1GB+ documents with a flat ~250MB heap footprint and 12ms latency. 
+In my previous post, I detailed how Aegis—an enterprise Retrieval-Augmented Generation (RAG) engine—uses the Claim Check pattern in Spring Boot to ingest 1GB+ documents with a flat ~250MB heap footprint and 12ms latency. 
 
 The Java gateway streams the binary payload to MinIO and drops a lightweight event token into Apache Kafka.
 
@@ -63,4 +63,4 @@ When Python attempted to send vectors to Qdrant, the OS threw: `[WinError 10053]
 The backend infrastructure is now fully hardened, asynchronous, and cost-optimized. In the final phase, I will decouple the system from proprietary Chatbot GUIs (like Claude Desktop) by implementing Anthropic's **Model Context Protocol (MCP)** and building a headless **LangGraph** agent to query the system autonomously.
 
 You can review the dual-stack architecture and the automated test suite on my GitHub:
-🔗 **[Project Aegis Repository](https://github.com/kusuridheeraj/Aegis)**
+🔗 **[Aegis Repository](https://github.com/kusuridheeraj/Aegis)**

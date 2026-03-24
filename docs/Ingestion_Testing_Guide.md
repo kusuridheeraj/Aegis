@@ -1,4 +1,4 @@
-# Testing Project Aegis: Execution Guide
+# Testing Aegis: Execution Guide
 
 This guide provides step-by-step instructions to test the Enterprise Ingestion Gateway. This proves that your Spring Boot application successfully streams large files to MinIO and publishes events to Apache Kafka without crashing the JVM.
 
@@ -58,6 +58,25 @@ You will instantly get a response like this (usually in around 12-20 millisecond
 {"status":"accepted","objectId":"some-uuid-temp_1gb.bin","message":"Document ingestion started successfully."}
 ```
 *Look at your Spring Boot terminal logs.* You will see logs confirming the file was streamed to MinIO and an event was published to Kafka!
+
+---
+
+## Step 3.5: Batch Ingest a Real Directory (Codebase RAG)
+
+Testing with a binary file proves the Claim Check pattern handles 1GB payloads. But Aegis is an Enterprise Context Engine. To actually feed it data for AI retrieval, you can point it at a local directory of PDFs, logs, or code (`.py`, `.java`, `.md`). The script preserves the relative directory structure in the vector payload so the AI understands architectural context.
+
+**For Linux / macOS Users:**
+```bash
+chmod +x scripts/upload_folder.sh
+./scripts/upload_folder.sh /path/to/your/documents
+```
+
+**For Windows Users:**
+*(Note: If you receive a security error about running scripts, you must temporarily bypass the execution policy for your terminal session)*
+```powershell
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+.\scripts\upload_folder.ps1 -FolderPath "C:\path\to\your\documents"
+```
 
 ---
 

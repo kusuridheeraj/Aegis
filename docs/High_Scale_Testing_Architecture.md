@@ -1,4 +1,4 @@
-# Scaling Project Aegis: 10 Million Hits/Second with 1GB Uploads
+# Scaling Aegis: 10 Million Hits/Second with 1GB Uploads
 
 Your current architecture successfully implements the Claim Check pattern to decouple heavy uploads from processing. However, if you are targeting Staff-level (SDE-3) engineering interviews at top-tier companies, you need to understand the physical and theoretical limits of your architecture.
 

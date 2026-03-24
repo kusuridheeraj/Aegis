@@ -1,4 +1,4 @@
-# Project Aegis
+# Aegis
 
 **A Distributed Enterprise RAG Engine & Real-Time Context System**
 
@@ -43,7 +43,7 @@ graph TD;
 
 To keep this README concise, all detailed system mechanics, testing guides, and engineering trade-offs have been modularized. Please explore the links below:
 
-* 🏛️ **[Architecture Decision Records (ADR)](ARCHITECTURE.md)** 
+* 🏛️ **[Architecture Decision Records (ADR)](docs/ARCHITECTURE.md)** 
   * *Read this to understand the "Why".* Covers the trade-offs of I/O vs CPU decoupling, why we used LangChain over naive chunking, Qdrant over PostgreSQL, and our DLQ/Tracing fault-tolerance strategy.
 * 🧪 **[Testing & Ingestion Guide](docs/Ingestion_Testing_Guide.md)** 
   * *Read this to run the code.* Step-by-step instructions for spinning up the Docker cluster and using the batch scripts (`.ps1` and `.sh`) to ingest your own PDF books or codebase into the vector engine.

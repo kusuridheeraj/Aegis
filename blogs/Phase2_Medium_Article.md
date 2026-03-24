@@ -4,7 +4,7 @@ A common anti-pattern in modern enterprise AI development is forcing a single te
 
 When tasked with building a Retrieval-Augmented Generation (RAG) pipeline, teams often attempt to build the ingestion gateway, the chunking logic, the embedding model, and the search API within a single monolithic application. 
 
-As I moved into Phase 2 of **Project Aegis** (a distributed enterprise context engine), I separated the architecture into a dual-stack, event-driven system: a Java/Spring Boot ingestion gateway, decoupled via Apache Kafka from a Python/FastAPI AI worker. 
+As I moved into Phase 2 of **Aegis** (a distributed enterprise context engine), I separated the architecture into a dual-stack, event-driven system: a Java/Spring Boot ingestion gateway, decoupled via Apache Kafka from a Python/FastAPI AI worker. 
 
 Here is a breakdown of the architectural decisions behind this split, the infrastructure trade-offs made to reduce operational costs, and the implementation of a Model Context Protocol (MCP) server to future-proof the AI interface.
 
@@ -53,7 +53,7 @@ Once the Python worker chunks the document, those chunks must be vectorized and 
 
 A common industry default is to use PostgreSQL with the `pgvector` extension. While practical if the organization already maintains a massive relational database, it is highly inefficient for a dedicated RAG application. PostgreSQL requires significant RAM and CPU overhead to maintain ACID compliance, transaction logs, and relational locks—none of which are strictly necessary for immutable vector embeddings.
 
-For Project Aegis, I opted for **Qdrant**. Written in Rust, Qdrant is purpose-built exclusively for vector search using a highly optimized HNSW (Hierarchical Navigable Small World) graph algorithm. 
+For Aegis, I opted for **Qdrant**. Written in Rust, Qdrant is purpose-built exclusively for vector search using a highly optimized HNSW (Hierarchical Navigable Small World) graph algorithm. 
 
 Furthermore, instead of relying on a paid cloud API (like OpenAI's embedding service), I used an open-source HuggingFace model (`all-MiniLM-L6-v2`) locally. This reduces the per-token cost of indexing a 10-million-document corpus to zero.
 
@@ -84,7 +84,7 @@ The standard approach is to build a proprietary REST API. However, this tightly 
 
 To solve this, I wrapped the Python search logic inside an open-source standard created by Anthropic called the **Model Context Protocol (MCP)**. 
 
-By exposing an MCP server over standard I/O (`stdio`), Project Aegis becomes a universal socket. Any AI client that adheres to the MCP specification can natively connect to the system, discover the `search_documents` tool, and query the local Qdrant database without requiring a single line of proprietary integration code.
+By exposing an MCP server over standard I/O (`stdio`), Aegis becomes a universal socket. Any AI client that adheres to the MCP specification can natively connect to the system, discover the `search_documents` tool, and query the local Qdrant database without requiring a single line of proprietary integration code.
 
 ```python
 # aegis-ai-core/mcp_server.py

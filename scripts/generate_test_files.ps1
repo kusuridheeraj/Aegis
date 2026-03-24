@@ -13,7 +13,7 @@ if ($Clean) {
     exit
 }
 
-Write-Host "Generating massive test files for Project Aegis benchmarks..." -ForegroundColor Cyan
+Write-Host "Generating massive test files for Aegis benchmarks..." -ForegroundColor Cyan
 
 # 500MB = 500 * 1024 * 1024 = 524288000 bytes
 if (-Not (Test-Path $Path500MB)) {

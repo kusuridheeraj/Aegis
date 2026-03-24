@@ -2,7 +2,7 @@
 
 Building a complex, dual-stack system on a local development machine is one thing. Ensuring that system can survive in a production environment is another. 
 
-In Phase 3 of **Project Aegis** (a distributed enterprise RAG engine), the goal was to transition the architecture from a set of fragile local processes into a robust, highly available, and containerized deployment. 
+In Phase 3 of **Aegis** (a distributed enterprise RAG engine), the goal was to transition the architecture from a set of fragile local processes into a robust, highly available, and containerized deployment. 
 
 Here is how I used Docker and Docker Compose to define strict service boundaries, enforce fault tolerance, and achieve infinite horizontal scalability.
 
@@ -53,7 +53,7 @@ Because Aegis uses the **Claim Check Pattern** with Apache Kafka acting as the e
 
 ### Conclusion: The Architecture is Complete
 
-Project Aegis is now a fully containerized, dual-stack, event-driven context engine. 
+Aegis is now a fully containerized, dual-stack, event-driven context engine. 
 
 By aggressively decoupling the I/O-heavy ingestion gateway from the CPU-heavy vectorization worker, utilizing specialized infrastructure like Qdrant and Kafka, and wrapping the entire system in isolated Docker containers, we have built an architecture capable of infinite horizontal scaling. 
 

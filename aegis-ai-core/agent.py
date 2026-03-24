@@ -59,7 +59,7 @@ autonomous_agent = workflow.compile()
 if __name__ == "__main__":
     # Test the headless LangGraph agent
     print("Initializing Headless LangGraph Agent...")
-    initial_state = {"query": "What are the key architectural decisions in Project Aegis?"}
+    initial_state = {"query": "What are the key architectural decisions in Aegis?"}
     
     # Run the graph
     result = autonomous_agent.invoke(initial_state)

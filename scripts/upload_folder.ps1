@@ -17,7 +17,7 @@ if ($files.Count -eq 0) {
     exit 0
 }
 
-Write-Host "Found $($files.Count) files. Beginning batch ingestion to Project Aegis..." -ForegroundColor Cyan
+Write-Host "Found $($files.Count) files. Beginning batch ingestion to Aegis..." -ForegroundColor Cyan
 
 foreach ($file in $files) {
     # Extract the relative path and convert backslashes to forward slashes
