@@ -22,10 +22,16 @@ def extract_text(file_bytes: bytes, filename: str) -> str:
                     text += page.get_text("text") + "\n"
         else:
             # For .md, .log, .py, .java, .csv, .txt, etc.
-            text = file_bytes.decode('utf-8', errors='ignore')
+            raw_content = file_bytes.decode('utf-8', errors='ignore')
+            text = f"File Path Context: {filename}\n\n{raw_content}"
     except Exception as e:
         logger.error(f"Failed to extract text from {filename}: {e}")
         text = file_bytes.decode('utf-8', errors='ignore')
+        
+    # Prepend filename for PDFs too if it succeeded
+    if text and filename_lower.endswith(".pdf"):
+        text = f"Source Document: {filename}\n\n{text}"
+        
     return text
 
 def chunk_text(text: str, chunk_size: int = 2000, overlap: int = 200) -> list[str]:

@@ -20,10 +20,14 @@ if ($files.Count -eq 0) {
 Write-Host "Found $($files.Count) files. Beginning batch ingestion to Project Aegis..." -ForegroundColor Cyan
 
 foreach ($file in $files) {
-    Write-Host "Uploading: $($file.Name)..." -NoNewline
+    # Extract the relative path and convert backslashes to forward slashes
+    $relPath = $file.FullName.Substring($FolderPath.Length).TrimStart('\', '/')
+    $relPath = $relPath -replace '\\', '/'
     
-    # Fire the curl command to the Spring Boot Gateway
-    $response = curl.exe -s -X POST -F "file=@$($file.FullName)" http://localhost:8080/api/v1/documents
+    Write-Host "Uploading: $relPath..." -NoNewline
+    
+    # Fire the curl command, explicitly overriding the filename to include the directory path
+    $response = curl.exe -s -X POST -F "file=@$($file.FullName);filename=$relPath" http://localhost:8080/api/v1/documents
     
     if ($response -match '"status":"accepted"') {
         Write-Host " [SUCCESS]" -ForegroundColor Green
