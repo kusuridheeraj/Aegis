@@ -1,0 +1,4 @@
+# Ignore scripts folder from GitHub language statistics
+scripts/* linguist-vendored
+*.ps1 linguist-detectable=false
+*.sh linguist-detectable=false
