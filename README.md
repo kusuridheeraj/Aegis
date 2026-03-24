@@ -4,42 +4,6 @@
 
 This project demonstrates an event-driven architecture bridging a Java JVM ingestion backend with a Python ML service, designed for high availability, low latency, and heavy data workloads using the Claim Check pattern.
 
-## Architecture Highlights
-* **The Heavy Lifter (Java / Spring Boot):** Acts as the API Gateway. Handles massive document uploads (1GB+) using the **Claim Check Pattern**, streaming payloads to MinIO and publishing lightweight events to Apache Kafka.
-* **The Tactical Blade (Python / FastAPI):** Dedicated AI Microservice consuming from Kafka, chunking data using LangChain, generating Vector Embeddings locally via HuggingFace, and storing them in a Vector Database.
-* **The Interface (MCP Server):** Exposes the semantic search engine via the Model Context Protocol for native integration with LLMs and autonomous LangGraph agents.
-* **Enterprise Hardening:** Features distributed tracing (Correlation IDs) and Kafka Dead Letter Queues (DLQ) for zero data loss during extraction failures.
-
-## The Data Lifecycle: How a 1GB File is Processed
-
-A core claim of this architecture is the ability to ingest massive 1GB+ payloads without crashing the system. Here is the exact real-time flow of how that data is handled and stored:
-
-### 1. Ingestion (Bypassing the Heap)
-When a 1GB file hits the Spring Boot endpoint, the JVM **does not** load it into memory. It opens an `InputStream` and streams the bytes directly into the MinIO Object Store in 8KB chunks. The heap usage remains flat at ~250MB, meaning the server can handle multiple 1GB uploads concurrently without `OutOfMemory` errors.
-
-### 2. The Event Bus
-Once the file is safe in MinIO, Java generates a UUID (`objectId`), attaches a `correlationId` for distributed tracing, and drops a tiny JSON event into Kafka. It instantly returns a `202 Accepted` to the user (usually in under 15ms).
-
-### 3. Extraction & Semantic Chunking
-The Python worker pulls the event from Kafka and downloads the 1GB file from MinIO into memory. Using `PyMuPDF`, it extracts the raw text. Because feeding a massive block of text to an LLM destroys context, it uses **LangChain's `RecursiveCharacterTextSplitter`** to intelligently slice the document into 2,000-character chunks while respecting paragraph boundaries.
-
-### 4. Vectorization & Qdrant Storage
-Python passes each chunk into a local HuggingFace model (`all-MiniLM-L6-v2`), generating an array of 384 floating-point numbers (the vector). 
-It then connects to **Qdrant** and stores two things for every chunk:
-* **The Vector:** The 384-dimensional math array used for rapid cosine-similarity searches.
-* **The Payload:** The original English text of the chunk, the `correlationId`, and the `objectId`.
-
-### 5. Garbage Collection (MinIO Cleanup)
-*Architectural Note:* Once the vectors and the text payload are successfully safely stored in Qdrant, the original 1GB binary file sitting in MinIO is technically redundant for the RAG search process. In a production environment, you would implement a scheduled Cron job or a final step in the Python worker to issue a `DELETE` command to MinIO, purging the original binary file to save hard disk space. 
-
-## Technologies
-* **Ingestion Gateway:** Java 21, Spring Boot 3, Spring Kafka
-* **Message Broker:** Apache Kafka (KRaft mode)
-* **Object Storage:** MinIO (S3 compatible)
-* **AI Service:** Python 3.11, FastAPI, HuggingFace, LangChain, LangGraph
-* **Vector DB:** Qdrant
-* **Deployment:** Docker Compose (Isolated bridge network)
-
 ## Architecture Diagram
 ```mermaid
 graph TD;
@@ -67,14 +31,29 @@ graph TD;
     class Kafka queue;
 ```
 
-## How to Run & Test (Infrastructure)
+## Technologies
+* **Ingestion Gateway:** Java 21, Spring Boot 3, Spring Kafka
+* **Message Broker:** Apache Kafka (KRaft mode)
+* **Object Storage:** MinIO (S3 compatible)
+* **AI Service:** Python 3.11, FastAPI, HuggingFace, LangChain, LangGraph
+* **Vector DB:** Qdrant
+* **Deployment:** Docker Compose (Isolated bridge network)
 
-To properly test the architecture, we generate massive dummy payloads to prove the Claim Check pattern handles extreme scale without crashing the JVM memory.
+## 📚 Documentation & Deep Dives
 
-**Step-by-Step Execution:**
-Please follow the detailed **[Ingestion Testing Guide](docs/Ingestion_Testing_Guide.md)** located in the `docs` folder. It covers:
-1. Spinning up the Docker infrastructure (Kafka, MinIO, Qdrant).
-2. Starting the Spring Boot Gateway and Python AI Worker.
-3. Using the included `.\scripts\upload_folder.ps1` to batch upload a directory of PDFs.
-4. Uploading the payload via `curl` and verifying the millisecond latency.
-5. Verifying the semantic chunks and vectors in the Qdrant Dashboard.
+To keep this README concise, all detailed system mechanics, testing guides, and engineering trade-offs have been modularized. Please explore the links below:
+
+* 🏛️ **[Architecture Decision Records (ADR)](ARCHITECTURE.md)** 
+  * *Read this to understand the "Why".* Covers the trade-offs of I/O vs CPU decoupling, why we used LangChain over naive chunking, Qdrant over PostgreSQL, and our DLQ/Tracing fault-tolerance strategy.
+* 🧪 **[Testing & Ingestion Guide](docs/Ingestion_Testing_Guide.md)** 
+  * *Read this to run the code.* Step-by-step instructions for spinning up the Docker cluster and using the batch scripts (`.ps1` and `.sh`) to ingest your own PDF books or codebase into the vector engine.
+* 📝 **[Engineering Blog Series](blogs/)** 
+  * *Read this for production war stories.* Deep dives into how we dropped API latency from 32s to 12ms, and how we solved a 62MB JSON payload bug caused by binary escaping.
+
+## Quick Start (Local Cluster)
+
+1. Spin up the infrastructure (Kafka, MinIO, Qdrant):
+   ```bash
+   docker-compose up -d
+   ```
+2. Follow the **[Testing Guide](docs/Ingestion_Testing_Guide.md)** to start the Java and Python microservices and batch-upload your documents.
