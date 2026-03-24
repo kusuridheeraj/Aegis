@@ -1,6 +1,6 @@
 # From 2GB Payloads to Autonomous Agents: Defending an Enterprise RAG Architecture
 
-In my previous post, [The 2GB Payload Problem](https://github.com/kusuridheeraj/Aegis/blob/main/BlogPost_Ingestion.md), I broke down how I used the Claim Check pattern in Spring Boot to drop API ingestion latency from 32 seconds to 12 milliseconds. 
+In my previous post, [The 2GB Payload Problem](https://github.com/kusuridheeraj/Aegis/blob/main/blogs/BlogPost_Ingestion.md), I broke down how I used the Claim Check pattern in Spring Boot to drop API ingestion latency from 32 seconds to 12 milliseconds. 
 
 By streaming massive files directly to MinIO and passing a lightweight event token through Apache Kafka, the system could ingest gigabytes of data without ever threatening the JVM's heap memory. 
 

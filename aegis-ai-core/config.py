@@ -2,6 +2,7 @@ import os
 
 KAFKA_BOOTSTRAP_SERVERS = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "127.0.0.1:9092")
 KAFKA_TOPIC = os.getenv("KAFKA_TOPIC", "aegis.documents.raw")
+KAFKA_DLQ_TOPIC = os.getenv("KAFKA_DLQ_TOPIC", "aegis.documents.failed")
 
 MINIO_URL = os.getenv("MINIO_URL", "localhost:9000")
 MINIO_ACCESS_KEY = os.getenv("MINIO_ACCESS_KEY", "aegis_admin")

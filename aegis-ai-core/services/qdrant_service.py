@@ -19,11 +19,13 @@ def init_collection():
             vectors_config=VectorParams(size=384, distance=Distance.COSINE),
         )
 
-# Run initialization on startup
-init_collection()
+# Run initialization on startup (REMOVED to prevent boot crashes if Qdrant is offline)
+# init_collection()
 
-def store_vectors(object_id: str, chunks: list[str], embeddings: list[list[float]]):
+def store_vectors(object_id: str, chunks: list[str], embeddings: list[list[float]], correlation_id: str = "NO_CORRELATION_ID"):
     """Inserts the vectors and the original text (payload) into Qdrant."""
+    init_collection() # Lazy load the collection creation
+    
     if not chunks or not embeddings:
         return
 
@@ -38,13 +40,14 @@ def store_vectors(object_id: str, chunks: list[str], embeddings: list[list[float
                 vector=vector,
                 payload={
                     "object_id": object_id,
+                    "correlation_id": correlation_id,
                     "chunk_index": i,
                     "text": chunk
                 }
             )
         )
     
-    logger.info(f"Upserting {len(points)} vectors into Qdrant for object: {object_id}")
+    logger.info(f"[{correlation_id}] Upserting {len(points)} vectors into Qdrant for object: {object_id}")
     client.upsert(
         collection_name=QDRANT_COLLECTION,
         points=points

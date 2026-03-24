@@ -12,6 +12,7 @@ import java.time.Instant;
 @NoArgsConstructor
 @AllArgsConstructor
 public class DocumentIngestedEvent {
+    private String correlationId;
     private String objectId;
     private String originalFilename;
     private String contentType;
