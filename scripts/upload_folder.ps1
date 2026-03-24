@@ -8,11 +8,12 @@ if (-Not (Test-Path $FolderPath)) {
     exit 1
 }
 
-# Get all PDF and TXT files in the folder
-$files = Get-ChildItem -Path $FolderPath -Include *.pdf, *.txt -Recurse
+# Get all relevant files in the folder (PDFs, Logs, Code, Data)
+$extensions = "*.pdf", "*.txt", "*.log", "*.md", "*.py", "*.java", "*.csv", "*.json"
+$files = Get-ChildItem -Path $FolderPath -Include $extensions -Recurse
 
 if ($files.Count -eq 0) {
-    Write-Host "No PDF or TXT files found in $FolderPath" -ForegroundColor Yellow
+    Write-Host "No valid documents found in $FolderPath" -ForegroundColor Yellow
     exit 0
 }
 

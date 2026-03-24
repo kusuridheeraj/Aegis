@@ -10,15 +10,21 @@ logger.info("Loading SentenceTransformer model...")
 model = SentenceTransformer('all-MiniLM-L6-v2')
 logger.info("Model loaded.")
 
-def extract_text_from_pdf(file_bytes: bytes) -> str:
-    """Extracts raw text from a PDF byte stream using PyMuPDF."""
+def extract_text(file_bytes: bytes, filename: str) -> str:
+    """Extracts raw text based on the file type."""
     text = ""
+    filename_lower = filename.lower()
+    
     try:
-        with fitz.open(stream=file_bytes, filetype="pdf") as doc:
-            for page in doc:
-                text += page.get_text("text") + "\n"
+        if filename_lower.endswith(".pdf"):
+            with fitz.open(stream=file_bytes, filetype="pdf") as doc:
+                for page in doc:
+                    text += page.get_text("text") + "\n"
+        else:
+            # For .md, .log, .py, .java, .csv, .txt, etc.
+            text = file_bytes.decode('utf-8', errors='ignore')
     except Exception as e:
-        logger.error(f"Failed to parse PDF: {e}")
+        logger.error(f"Failed to extract text from {filename}: {e}")
         text = file_bytes.decode('utf-8', errors='ignore')
     return text
 

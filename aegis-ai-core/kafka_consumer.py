@@ -4,7 +4,7 @@ import traceback
 from kafka import KafkaConsumer, KafkaProducer
 from config import KAFKA_BOOTSTRAP_SERVERS, KAFKA_TOPIC, KAFKA_DLQ_TOPIC
 from services.minio_service import download_document
-from services.embedding_service import extract_text_from_pdf, chunk_text, generate_embeddings
+from services.embedding_service import extract_text, chunk_text, generate_embeddings
 from services.qdrant_service import store_vectors
 
 logger = logging.getLogger(__name__)
@@ -57,8 +57,8 @@ def start_consuming():
             file_bytes = download_document(object_id)
             logger.info(f"[{correlation_id}] Successfully downloaded payload from MinIO.")
             
-            # 2. Extract Text (Supports PDFs and raw text)
-            raw_text = extract_text_from_pdf(file_bytes)
+            # 2. Extract Text (Intelligently handles PDFs, logs, code, markdown)
+            raw_text = extract_text(file_bytes, filename)
             
             if not raw_text.strip():
                 logger.warning(f"[{correlation_id}] No extractable text found in {object_id}")
