@@ -62,7 +62,7 @@ I uploaded a 40MB file to the Java gateway. While Python was generating the Hugg
 
 ---
 
-### Three "Aha" Bugs & Architectural Edge Cases
+### Three Edge Cases that Break Production Pipelines
 
 Tutorials teach the happy path. Production engineering is defined by edge cases. 
 
@@ -94,4 +94,4 @@ The pipeline is now fault-tolerant, asynchronous, and heavily optimized.
 
 In Part 3, I will decouple the system from proprietary Chatbot GUIs (like Claude Desktop) by implementing Anthropic's **Model Context Protocol (MCP)**, turning the Qdrant vector database into a universal socket for autonomous LangGraph agents.
 
-📂 **[Full Code & Trace Metrics on GitHub](https://github.com/kusuridheeraj/Aegis)**
+📂 **[Full Code & Trace Metrics on GitHub](https://github.com/kusuridheeraj/Aegis)**idheeraj/Aegis)**
