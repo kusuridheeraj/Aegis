@@ -15,7 +15,7 @@ COPY requirements.txt .
 
 # Install dependencies using uv with a cache mount to drastically speed up rebuilds
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv pip install --system --no-cache -r requirements.txt
+    uv pip install --system -r requirements.txt
 
 # Copy application code
 COPY . .

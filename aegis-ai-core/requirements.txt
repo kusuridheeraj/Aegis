@@ -1,3 +1,4 @@
+--extra-index-url https://download.pytorch.org/whl/cpu
 fastapi[standard]
 kafka-python-ng
 minio==7.2.5
@@ -9,3 +10,4 @@ pytest-mock
 langchain-text-splitters
 langgraph
 langchain-core
+pymupdf
