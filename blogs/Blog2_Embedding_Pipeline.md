@@ -20,8 +20,22 @@ To stress-test the worker, I generated a 10MB dummy binary file and uploaded it.
 `Payload error: JSON payload (62922836 bytes) is larger than allowed (limit: 33554432 bytes).`
 
 **How did 10MB become 62MB?** 
-Because the dummy file was raw binary zeros, it contained no spaces. My naive `.split(" ")` function treated the entire 10MB file as one massive "word." Qdrant's REST API requires a JSON payload. When Python's `json.dumps()` attempted to serialize 10 million non-printable binary null bytes, it had to escape every single one of them into the 6-byte unicode string `\u0000`. 
-`10MB * 6 bytes = 60MB`. The escaped string bloated to 62MB, violating Qdrant's strict 32MB HTTP request limit. Qdrant violently severed the TCP connection.
+Because the dummy file was raw binary zeros, it contained no spaces. My naive `.split(" ")` function treated the entire 10MB file as one massive "word." 
+
+Qdrant's REST API requires a JSON payload. JSON is strictly a text format; it cannot natively hold raw binary null bytes. When Python's `json.dumps()` attempted to serialize 10 million non-printable binary null bytes, it panicked and escaped every single one of them into the Unicode string `\u0000`. 
+
+Let's do the math on that unicode string:
+* `\` (1 byte)
+* `u` (1 byte)
+* `0` (1 byte)
+* `0` (1 byte)
+* `0` (1 byte)
+* `0` (1 byte)
+
+To safely represent a single **1-byte** null character in JSON text, the system had to use **6 bytes** of text. 
+`10MB * 6 = 60MB.`
+
+Add in the standard JSON brackets, HTTP headers, the 384-dimensional vector array numbers, and the metadata, and the payload hit exactly **62,922,836 bytes**. The escaped string bloated past Qdrant's strict 32MB HTTP request limit, and the database violently severed the TCP connection.
 
 **The Silent Data Loss**
 The database rejecting the payload was bad. But the *real* catastrophe was what happened next. Because I was relying on a standard `try/except` block and Kafka's `enable_auto_commit=True`, the Python script logged the error and moved on. Kafka assumed the message was processed successfully and advanced the offset.
@@ -83,9 +97,12 @@ An architecture is only theoretical until you try to break it. I ran a live Chao
 
 Because of the new architecture, the DLQ caught it instantly. I queried the `aegis.documents.failed` topic, and the payload was sitting there perfectly intact, waiting for the database to come back online. 
 
-> **Sidebar: A Lesson in Docker Networking**
-> Wiring Python to Kafka inside a Docker bridge network initially exposed a classic distributed bug. My Python logs showed `connecting to localhost:9092 [IPv6 ('::1', 9092, 0, 0)]` followed by an immediate connection drop. 
-> *The Cause:* Inside `docker-compose.yml`, Kafka's `ADVERTISED_LISTENERS` was set to `localhost`. Python resolved `localhost` to the IPv6 address `::1`. But the Java KRaft controller was strictly bound to IPv4. The protocol mismatch caused a silent drop. I fixed it by explicitly forcing the advertised listener to `127.0.0.1`. Never hide your failures; they are the best teachers.
+> **Sidebar: Two Lessons in Distributed Systems**
+> **1. The IPv6 Flap:** Wiring Python to Kafka inside a Docker bridge network exposed a classic networking bug. My Python logs showed `connecting to localhost:9092 [IPv6 ('::1')]` followed by an immediate drop. Kafka's `ADVERTISED_LISTENERS` was set to `localhost`. Python resolved `localhost` to IPv6 `::1`, but the Java KRaft controller was strictly bound to IPv4. The protocol mismatch caused a silent drop. I fixed it by forcing the listener to `127.0.0.1`. 
+> 
+> **2. The Unkillable Thread:** During local testing, attempting to stop the FastAPI server (`CTRL+C`) caused the terminal to hang indefinitely, eventually throwing `ValueError: Invalid file descriptor: -1`. To prevent the blocking `for message in consumer:` loop from starving the web server, I launched it inside `asyncio.get_event_loop().run_in_executor()`. However, when Uvicorn receives a SIGINT (`CTRL+C`) to gracefully shut down, it waits for all background threads to finish. Because the Kafka thread is trapped in an infinite network-polling loop, it ignores the shutdown signal, resulting in a hung process until the OS forcefully rips the sockets away. In production, this requires passing a `threading.Event()` kill switch to the loop. 
+> 
+> *Never hide your failures; they are the best teachers.*
 
 ### Next Steps
 
