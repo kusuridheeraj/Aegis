@@ -104,6 +104,31 @@ Because of the new architecture, the DLQ caught it instantly. I queried the `aeg
 > 
 > *Never hide your failures; they are the best teachers.*
 
+### 6. Developer Experience (DevEx): Slaying the 3-Minute Build
+
+A Staff Engineer isn't just responsible for production architecture; they are responsible for the productivity of the entire engineering team. When I first containerized the Python worker, the `docker build` was taking over 3 minutes. 
+
+I traced the bottleneck to two massive anti-patterns:
+1. **The PyTorch CUDA Bloat:** The HuggingFace `sentence-transformers` library relies on PyTorch. By default, running `pip install torch` on Linux downloads the massive 2GB+ NVIDIA CUDA drivers. Since the container was doing CPU-bound inference, this was a massive waste of bandwidth. I forced the `cpu-only` PyTorch index in `requirements.txt`.
+2. **Replacing Pip with `uv`:** I ripped out standard `pip` in the Dockerfile and replaced it with Astral's `uv` (a rust-based package manager) combined with a Docker `--mount=type=cache`. 
+
+Finally, to completely eliminate the build step during local iteration, I used **Live Volume Reloading**. 
+
+```yaml
+# docker-compose.yml
+    volumes:
+      - ./aegis-ai-core:/app
+```
+
+By mounting the local source code directly into the container, Uvicorn's `--reload` flag detects changes made in the host IDE and instantly restarts the worker inside the isolated Docker network. **Build time went from 3 minutes to 0 seconds.**
+
+### 7. The Reality of Edge Cases & "Software Rot"
+
+Tutorials teach the happy path. Production engineering is defined by edge cases and silent breakages. During the final end-to-end testing of this pipeline, two massive, invisible bugs surfaced that completely broke the ingestion flow:
+
+1. **The Windows `curl` Comma Bug:** When a user uploaded a file named `Book, Version 2 (Draft).pdf`, the pipeline failed silently with an empty response. *The Cause:* Windows `curl.exe` violently crashes when it encounters commas `,` or parentheses `()` inside the `-F` multipart form parameter, misinterpreting them as network header delimiters. *The Fix:* I updated the File Watcher script to temporarily copy any incoming file to a sanitized `temp.bin` filename in the `$env:TEMP` directory, upload it, and then delete the temp file, completely bypassing the OS-level parser bug.
+2. **Software Rot in Docker (`:latest`):** The MinIO bucket mysteriously vanished. *The Cause:* I had tagged the MinIO setup container with `minio/mc:latest`. The vendor released a silent update that entirely deprecated and removed the `mc config host add` command in favor of `mc alias set`. Because I didn't pin a specific image version, the setup container went into an infinite crash loop trying to execute a command that no longer existed, preventing the bucket from ever being created. *The Lesson:* Never use the `:latest` tag in a production `docker-compose.yml`. Always pin your infrastructure versions.
+
 ### Next Steps
 
 The backend pipeline is now fully hardened, asynchronous, and fault-tolerant. 
