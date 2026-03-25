@@ -115,3 +115,5 @@ The pipeline is now fault-tolerant, asynchronous, and heavily optimized.
 In Part 3, I will decouple the system from proprietary Chatbot GUIs (like Claude Desktop) by implementing Anthropic's **Model Context Protocol (MCP)**, turning the Qdrant vector database into a universal socket for autonomous LangGraph agents.
 
 📂 **[Full Code & Trace Metrics on GitHub](https://github.com/kusuridheeraj/Aegis)**
+
+📖 **[Read Part 1: From OOM to 12ms (The Claim Check Pattern)](https://medium.com/@kusuridheerajkumar/from-oom-to-12ms-scaling-large-file-uploads-with-the-claim-check-pattern-7bcf96907e8c)**
