@@ -6,7 +6,7 @@ In Part 1, I built the Java ingestion edge: files stream directly to MinIO, a li
 
 The Python worker's job looked simple on paper: pull the file from MinIO using the `objectId` from the Kafka event, extract the text, chunk it, generate mathematical vectors, and push them to Qdrant.
 
-But moving from a monolith to an asynchronous, polyglot architecture introduces severe complexity. Two bugs nearly broke the pipeline. One caused a 62MB JSON payload explosion. The other caused silent data loss—documents permanently disappearing with zero errors in the telemetry logs. 
+But decoupling a Java gateway from a Python ML worker across a network introduces severe blind spots. Two edge cases nearly broke the pipeline. One caused a 62MB JSON payload explosion. The other caused silent data loss—documents permanently disappearing with zero errors in the telemetry logs. 
 
 Here is how I hardened the ML pipeline using Semantic Chunking, Dead Letter Queues, and Garbage Collection.
 
