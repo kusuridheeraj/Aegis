@@ -77,13 +77,16 @@ Attempting to stop the FastAPI server (`CTRL+C`) caused the terminal to hang ind
 
 ---
 
-### DevEx & State: Slaying the 3-Minute Build
+### Architectural Polish: Garbage Collection
 
-A Staff Engineer isn't just responsible for production architecture; they are responsible for Developer Experience (DevEx). When I first containerized the Python worker, `docker build` took over 3 minutes. 
+Finally, to ensure the system scales indefinitely without bankrupting the cloud storage budget, I implemented **Garbage Collection**. The exact microsecond the Qdrant DB returns a `200 OK`, the Python worker fires a `DELETE` command back to MinIO to permanently purge the raw 40MB binary file, keeping the storage footprint at absolute zero. The pipeline is entirely self-cleaning.
 
-Two anti-patterns were causing this:
-1. **The PyTorch CUDA Bloat:** HuggingFace relies on PyTorch. Running `pip install torch` on Linux defaults to downloading massive 2GB+ NVIDIA CUDA drivers. Since the container does CPU-bound inference, this was a massive waste of bandwidth. Forcing the `cpu-only` PyTorch index in `requirements.txt` cut the download from 2GB to ~200MB.
-2. **Replacing Pip with `uv`:** I replaced standard `pip` with Astral's `uv` (a rust-based package manager) combined with a Docker `--mount=type=cache`. Dependency installs dropped from 90 seconds to 3 seconds. 
+### What's Next
+The pipeline is now fault-tolerant, asynchronous, and heavily optimized. 
+
+In Part 3, I will decouple the system from proprietary Chatbot GUIs (like Claude Desktop) by implementing Anthropic's **Model Context Protocol (MCP)**, turning the Qdrant vector database into a universal socket for autonomous LangGraph agents.
+
+📂 **[Full Code & Trace Metrics on GitHub](https://github.com/kusuridheeraj/Aegis)** 3 seconds. 
 
 Finally, I implemented **Garbage Collection**. The exact microsecond the Qdrant DB returns a `200 OK`, the Python worker fires a `DELETE` command back to MinIO to permanently purge the raw 40MB binary file, keeping the cloud storage costs at absolute zero. The pipeline is entirely self-cleaning.
 
