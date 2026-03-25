@@ -94,13 +94,4 @@ The pipeline is now fault-tolerant, asynchronous, and heavily optimized.
 
 In Part 3, I will decouple the system from proprietary Chatbot GUIs (like Claude Desktop) by implementing Anthropic's **Model Context Protocol (MCP)**, turning the Qdrant vector database into a universal socket for autonomous LangGraph agents.
 
-📂 **[Full Code & Trace Metrics on GitHub](https://github.com/kusuridheeraj/Aegis)** 3 seconds. 
-
-Finally, I implemented **Garbage Collection**. The exact microsecond the Qdrant DB returns a `200 OK`, the Python worker fires a `DELETE` command back to MinIO to permanently purge the raw 40MB binary file, keeping the cloud storage costs at absolute zero. The pipeline is entirely self-cleaning.
-
-### What's Next
-The pipeline is now fault-tolerant, asynchronous, and heavily optimized. 
-
-In Part 3, I will decouple the system from proprietary Chatbot GUIs (like Claude Desktop) by implementing Anthropic's **Model Context Protocol (MCP)**, turning the Qdrant vector database into a universal socket for autonomous LangGraph agents.
-
 📂 **[Full Code & Trace Metrics on GitHub](https://github.com/kusuridheeraj/Aegis)**
