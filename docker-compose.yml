@@ -106,7 +106,7 @@ services:
       - MINIO_URL=http://aegis-minio:9000
     restart: on-failure
     healthcheck:
-      test: ["CMD", "wget", "--spider", "http://localhost:8080/api/v1/documents"]
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/api/v1/documents/health || exit 1"]
       interval: 15s
       timeout: 5s
       retries: 3

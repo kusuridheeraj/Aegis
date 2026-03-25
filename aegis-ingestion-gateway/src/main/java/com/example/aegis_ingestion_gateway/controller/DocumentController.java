@@ -23,6 +23,11 @@ public class DocumentController {
     private final MinioService minioService;
     private final KafkaProducerService kafkaProducerService;
 
+    @GetMapping("/health")
+    public ResponseEntity<String> healthCheck() {
+        return ResponseEntity.ok("Gateway is healthy");
+    }
+
     @PostMapping
     public ResponseEntity<?> uploadDocument(@RequestParam("file") MultipartFile file) {
         if (file.isEmpty()) {
