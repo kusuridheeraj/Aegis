@@ -2,7 +2,13 @@
 
 **A Distributed Enterprise RAG Engine & Real-Time Context System**
 
-This project demonstrates an event-driven architecture bridging a Java JVM ingestion backend with a Python ML service, designed for high availability, low latency, and heavy data workloads using the Claim Check pattern.
+This project demonstrates an event-driven architecture bridging a Java JVM ingestion backend with a Python ML service. It is designed for high availability, low latency, and heavy data workloads using the **Claim Check pattern**. 
+
+### The Data Flow
+1. **Ingestion:** Spring Boot catches massive documents (e.g., 40MB+ PDFs), streams the raw binary directly to MinIO, and publishes an event to Kafka in milliseconds, bypassing JVM heap limits.
+2. **Transformation:** A headless Python worker catches the Kafka event, downloads the file, and uses LangChain to intelligently split the text into semantic chunks.
+3. **Vectorization:** The Python worker uses a local HuggingFace CPU model to generate 384-dimensional mathematical vectors for every chunk.
+4. **Storage & Cleanup:** The vectors and textual metadata are safely stored in **Qdrant**, and the raw binary file is garbage-collected (deleted) from MinIO to prevent cloud storage bloat.
 
 ## Architecture Diagram
 ```mermaid
@@ -45,7 +51,7 @@ To keep this README concise, all detailed system mechanics, testing guides, and 
 
 * 🏛️ **[Architecture Decision Records (ADR)](docs/ARCHITECTURE.md)** 
   * *Read this to understand the "Why".* Covers the trade-offs of I/O vs CPU decoupling, why we used LangChain over naive chunking, Qdrant over PostgreSQL, and our DLQ/Tracing fault-tolerance strategy.
-* 🧪 **[Testing & Ingestion Guide](docs/Ingestion_Testing_Guide.md)** 
+* 🧪 **[Testing & Ingestion Guide](docs/End_to_End_Testing_Guide.md)** 
   * *Read this to run the code.* Step-by-step instructions for spinning up the Docker cluster and using the batch scripts (`.ps1` and `.sh`) to ingest your own PDF books or codebase into the vector engine.
 * 📝 **[Engineering Blog Series](blogs/)** 
   * *Read this for production war stories.* Deep dives into how we dropped API latency from 32s to 12ms, and how we solved a 62MB JSON payload bug caused by binary escaping.
@@ -56,4 +62,4 @@ To keep this README concise, all detailed system mechanics, testing guides, and 
    ```bash
    docker-compose up -d
    ```
-2. Follow the **[Testing Guide](docs/Ingestion_Testing_Guide.md)** to start the Java and Python microservices and batch-upload your documents.
+2. Follow the **[Testing Guide](docs/End_to_End_Testing_Guide.md)** to start the Java and Python microservices and batch-upload your documents.
