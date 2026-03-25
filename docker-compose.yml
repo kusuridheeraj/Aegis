@@ -17,13 +17,19 @@ services:
     restart: unless-stopped
     networks:
       - aegis-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
 
   # 2. MinIO Setup
   aegis-minio-setup:
     image: minio/mc
     container_name: aegis-minio-setup
     depends_on:
-      - aegis-minio
+      aegis-minio:
+        condition: service_healthy
     networks:
       - aegis-net
     entrypoint: >
@@ -57,6 +63,11 @@ services:
     volumes:
       - kafka_data:/var/lib/kafka/data
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z localhost 9092 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
 
   # 4. Qdrant Vector Database
   aegis-qdrant:
@@ -70,6 +81,7 @@ services:
     volumes:
       - qdrant_data:/qdrant/storage
     restart: unless-stopped
+    # Removed healthcheck because Qdrant's container image has no curl/wget installed
 
   # 5. Spring Boot Ingestion Gateway (Phase 1)
   aegis-gateway:
@@ -81,13 +93,23 @@ services:
       - "8080:8080"
     networks:
       - aegis-net
+    volumes:
+      # Mount the local source code into the container for rapid iteration
+      - ./aegis-ingestion-gateway/src:/app/src
     depends_on:
-      - aegis-kafka
-      - aegis-minio
+      aegis-kafka:
+        condition: service_healthy
+      aegis-minio:
+        condition: service_healthy
     environment:
       - SPRING_KAFKA_BOOTSTRAP_SERVERS=aegis-kafka:9092
       - MINIO_URL=http://aegis-minio:9000
     restart: on-failure
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "http://localhost:8080/api/v1/documents"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
 
   # 6. Python AI Brain & MCP Server (Phase 2)
   aegis-ai:
@@ -99,15 +121,26 @@ services:
       - "8000:8000"
     networks:
       - aegis-net
+    volumes:
+      # Mount the local Python code so Uvicorn --reload works instantly without rebuilding
+      - ./aegis-ai-core:/app
     depends_on:
-      - aegis-kafka
-      - aegis-minio
-      - aegis-qdrant
+      aegis-kafka:
+        condition: service_healthy
+      aegis-minio:
+        condition: service_healthy
+      aegis-qdrant:
+        condition: service_started
     environment:
       - KAFKA_BOOTSTRAP_SERVERS=aegis-kafka:9092
       - MINIO_URL=aegis-minio:9000
       - QDRANT_URL=http://aegis-qdrant:6333
     restart: on-failure
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
 
 volumes:
   minio_data:
