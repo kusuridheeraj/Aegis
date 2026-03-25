@@ -81,6 +81,14 @@ Attempting to stop the FastAPI server (`CTRL+C`) caused the terminal to hang ind
 
 Finally, to ensure the system scales indefinitely without bankrupting the cloud storage budget, I implemented **Garbage Collection**. The exact microsecond the Qdrant DB returns a `200 OK`, the Python worker fires a `DELETE` command back to MinIO to permanently purge the raw 40MB binary file, keeping the storage footprint at absolute zero. The pipeline is entirely self-cleaning.
 
+### A Footnote on Container Bloat (PyTorch & Docker)
+
+If you are containerizing an ML worker like this, you will likely hit a massive Docker build bottleneck. 
+
+When I first wrote the `Dockerfile`, the dependency installation was taking over 3 minutes and downloading 2GB+ of data. *The Cause:* HuggingFace relies on PyTorch, and `pip` on Linux defaults to downloading massive NVIDIA CUDA drivers. Because this worker is strictly CPU-bound, those drivers are dead weight.
+
+*The Fix:* Forcing the `cpu-only` PyTorch index in `requirements.txt` cut the download to ~200MB. Combining that with Astral's `uv` package manager and a Docker `--mount=type=cache` dropped the dependency install time from 90 seconds to exactly 3 seconds, making local iteration actually bearable.
+
 ### What's Next
 The pipeline is now fault-tolerant, asynchronous, and heavily optimized. 
 
