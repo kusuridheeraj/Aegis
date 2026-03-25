@@ -26,9 +26,11 @@ Because the dummy file was raw binary zeros, it contained no spaces. My naive `.
 Qdrant's REST API requires a JSON payload. JSON is strictly a text format; it cannot natively hold raw binary null bytes. When Python's `json.dumps()` attempted to serialize 10 million non-printable binary null bytes, it panicked and escaped every single one of them into the 6-character Unicode sequence `\u0000`. 
 
 * `1 binary byte  →  \u0000  (6 text bytes)`
-* `10MB × 6 = 60MB`
+* **A 6x Payload Explosion**
 
-Add the 384-dimensional vector array, HTTP headers, and metadata, and you land at exactly **62,922,836 bytes**—well past Qdrant's strict 32MB limit. The database violently severed the TCP connection.
+To safely represent a single 1-byte null character, the system required 6 bytes of text. My 10MB file instantly bloated to 60MB. Add the 384-dimensional vector array and HTTP headers, and you land at exactly **62,922,836 bytes**—well past Qdrant's strict 32MB limit. The database violently severed the TCP connection.
+
+If a user had uploaded a 1GB binary file under this naive chunking logic, it would have generated a **6 Gigabyte JSON HTTP request**, instantly triggering an Out-Of-Memory (OOM) crash on the Python worker.
 
 **The Fix:** Naive chunking is an anti-pattern. I replaced it with **LangChain's `RecursiveCharacterTextSplitter`**, which intelligently splits on paragraphs first, then newlines, then spaces. This guarantees predictable payload sizes and preserves the semantic boundaries of the author's original thoughts for the LLM. 
 
