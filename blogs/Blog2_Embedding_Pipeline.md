@@ -1,4 +1,4 @@
-# Why Naive Chunking and Kafka Auto-Commits are Destroying Your RAG Pipeline
+# Why Naive Chunking and Silent Failures are Destroying Your RAG Pipeline
 
 *Part 2 of the Aegis series. [Part 1 is here](BlogPost_Ingestion.md) — how the Spring Boot gateway uses the Claim Check pattern to stream massive files without touching the JVM heap.*
 
