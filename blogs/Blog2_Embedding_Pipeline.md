@@ -79,7 +79,7 @@ Attempting to stop the FastAPI server (`CTRL+C`) caused the terminal to hang ind
 
 ### Architectural Polish: Garbage Collection
 
-Finally, to ensure the system scales indefinitely without bankrupting the cloud storage budget, I implemented **Garbage Collection**. The exact microsecond the Qdrant DB returns a `200 OK`, the Python worker fires a `DELETE` command back to MinIO to permanently purge the raw 40MB binary file, keeping the storage footprint at absolute zero. The pipeline is entirely self-cleaning.
+Finally, to ensure the system scales indefinitely without bankrupting the cloud storage budget, I implemented **Garbage Collection**. The exact microsecond the Qdrant DB returns a `200 OK`, the Python worker fires a `DELETE` command back to MinIO to permanently purge the original binary payload—whether it is 10MB or 2GB—keeping the storage footprint at absolute zero. The pipeline is entirely self-cleaning.
 
 ### A Footnote on Container Bloat (PyTorch & Docker)
 
