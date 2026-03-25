@@ -32,7 +32,7 @@ To safely represent a single 1-byte null character, the system required 6 bytes 
 
 If a user had uploaded a 1GB binary file under this naive chunking logic, it would have generated a **6 Gigabyte JSON HTTP request**, instantly triggering an Out-Of-Memory (OOM) crash on the Python worker.
 
-**The Fix:** Naive chunking is an anti-pattern. I replaced it with **LangChain's `RecursiveCharacterTextSplitter`**, which intelligently splits on paragraphs first, then newlines, then spaces. This guarantees predictable payload sizes and preserves the semantic boundaries of the author's original thoughts for the LLM. 
+**The Fix:** Naive chunking is an anti-pattern. I replaced it with **LangChain's `RecursiveCharacterTextSplitter`**, which intelligently splits on paragraphs first, then newlines, then spaces. This guarantees predictable payload sizes and preserves the logical boundaries of the source material, ensuring the LLM doesn't lose context. 
 
 ```python
 from langchain_text_splitters import RecursiveCharacterTextSplitter
