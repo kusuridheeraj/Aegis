@@ -34,7 +34,7 @@ services:
       - aegis-net
     entrypoint: >
       /bin/sh -c "
-      until (/usr/bin/mc config host add myminio http://aegis-minio:9000 aegis_admin aegis_password) do echo '...waiting...' && sleep 1; done;
+      until (/usr/bin/mc alias set myminio http://aegis-minio:9000 aegis_admin aegis_password) do echo '...waiting...' && sleep 1; done;
       /usr/bin/mc mb myminio/aegis-raw-docs;
       /usr/bin/mc policy set public myminio/aegis-raw-docs;
       exit 0;

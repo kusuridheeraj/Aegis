@@ -30,9 +30,17 @@ $action = {
     # Convert to relative path
     $relPath = $path.Substring($FolderPath.Length).TrimStart('\', '/')
     $relPath = $relPath -replace '\\', '/'
+    
+    # Windows curl.exe breaks completely if the file path or filename contains commas or parentheses.
+    # To fix this, we copy the file to a safe temporary name, upload it, and delete the temp file.
+    $safeTempPath = Join-Path $env:TEMP "aegis_temp_upload_$($Event.SourceEventArgs.ChangeType).bin"
+    Copy-Item -Path $path -Destination $safeTempPath -Force
+    
+    # Sanitize the filename string sent to the server
+    $safeFilename = $relPath -replace '[,()]', '_'
 
     try {
-        $response = curl.exe -s -X POST -F "file=@$path;filename=$relPath" http://localhost:8080/api/v1/documents
+        $response = curl.exe -s -X POST -F "file=@$safeTempPath;filename=$safeFilename" http://localhost:8080/api/v1/documents
         
         if ($response -match '"status":"accepted"') {
             Write-Host " [SUCCESS]" -ForegroundColor Green
@@ -42,6 +50,8 @@ $action = {
         }
     } catch {
         Write-Host " [ERROR] Gateway Offline" -ForegroundColor Red
+    } finally {
+        if (Test-Path $safeTempPath) { Remove-Item $safeTempPath -Force }
     }
 }
 
