@@ -38,7 +38,7 @@ If a user had uploaded a 1GB binary file under this naive chunking logic, it wou
 
 ---
 
-### Bug 2: Silent Data Loss and the Auto-Commit Trap
+### Distributed Fracture 2: Silent Data Loss and the Auto-Commit Trap
 
 While fixing the chunking, I noticed something much worse had happened. 
 
@@ -93,5 +93,7 @@ When I first wrote the `Dockerfile`, the dependency installation was taking over
 The pipeline is now fault-tolerant, asynchronous, and heavily optimized. 
 
 In Part 3, I will decouple the system from proprietary Chatbot GUIs (like Claude Desktop) by implementing Anthropic's **Model Context Protocol (MCP)**, turning the Qdrant vector database into a universal socket for autonomous LangGraph agents.
+
+📂 **[Full Code & Trace Metrics on GitHub](https://github.com/kusuridheeraj/Aegis)**idheeraj/Aegis)****Model Context Protocol (MCP)**, turning the Qdrant vector database into a universal socket for autonomous LangGraph agents.
 
 📂 **[Full Code & Trace Metrics on GitHub](https://github.com/kusuridheeraj/Aegis)**idheeraj/Aegis)**
