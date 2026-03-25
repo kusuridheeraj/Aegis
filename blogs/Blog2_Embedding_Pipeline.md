@@ -2,11 +2,9 @@
 
 *Part 2 of the Aegis series. [Part 1 is here](BlogPost_Ingestion.md) — how the Spring Boot gateway uses the Claim Check pattern to stream massive files without touching the JVM heap.*
 
-In Part 1, I built the Java ingestion edge: files stream directly to MinIO, a lightweight event token drops into Apache Kafka, and the API returns `202 Accepted` in 12 milliseconds without blocking Tomcat threads.
+The Python ML worker's job looked simple on paper: consume the Kafka event, pull the massive file from MinIO, chunk the text, generate mathematical vectors, and push them to Qdrant.
 
-The Python worker's job looked simple on paper: pull the file from MinIO using the `objectId` from the Kafka event, extract the text, chunk it, generate mathematical vectors, and push them to Qdrant.
-
-But decoupling a Java gateway from a Python ML worker across a network introduces severe blind spots. Two edge cases nearly broke the pipeline. One caused a 62MB JSON payload explosion. The other caused silent data loss—documents permanently disappearing with zero errors in the telemetry logs. 
+But decoupling a Java gateway from a Python worker across a network introduces severe blind spots. Two edge cases nearly broke the pipeline. One caused a 62MB JSON payload explosion. The other caused silent data loss—documents permanently disappearing with zero errors in the telemetry logs. 
 
 Here is how I hardened the ML pipeline using Semantic Chunking, Dead Letter Queues, and Garbage Collection.
 
