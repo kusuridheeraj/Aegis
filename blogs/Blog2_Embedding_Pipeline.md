@@ -34,6 +34,19 @@ If a user had uploaded a 1GB binary file under this naive chunking logic, it wou
 
 **The Fix:** Naive chunking is an anti-pattern. I replaced it with **LangChain's `RecursiveCharacterTextSplitter`**, which intelligently splits on paragraphs first, then newlines, then spaces. This guarantees predictable payload sizes and preserves the semantic boundaries of the author's original thoughts for the LLM. 
 
+```python
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+
+def chunk_text(text: str, chunk_size: int = 2000, overlap: int = 200) -> list[str]:
+    text_splitter = RecursiveCharacterTextSplitter(
+        chunk_size=chunk_size,
+        chunk_overlap=overlap,
+        length_function=len,
+        separators=["\n\n", "\n", " ", ""]
+    )
+    return text_splitter.split_text(text)
+```
+
 *(Note: Adding `chunk_overlap=200` ensures that the start of one chunk shares 200 characters with the end of the previous chunk, preventing the model from losing context at hard boundaries).*
 
 ---
