@@ -87,13 +87,19 @@ I uploaded a 40MB file to the Java gateway. While Python was generating the Hugg
 Tutorials teach the happy path. Production engineering is defined by edge cases. 
 
 **1. The Windows `curl` Comma Bug (Client vs. Server Limits):**
-When uploading a file named `Book, Version 2 (Draft).pdf`, the pipeline failed silently. The initial panic was that we hit an architectural limit. We didn't. The Spring Boot backend supports 2GB multipart boundaries flawlessly. The problem was the Client Tool. Windows `curl.exe` violently crashes when it encounters commas `,` or parentheses `()` inside the `-F` parameter, misinterpreting them as network header delimiters. *The Fix:* To shield users from this OS-level parsing bug, I wrote a PowerShell watcher script that automatically copies incoming files to a sanitized `$env:TEMP` directory, uploads them, and deletes them, abstracting the broken client logic entirely.
+*   **The Symptom:** When uploading a file named `Book, Version 2 (Draft).pdf`, the pipeline failed silently with an empty response. The server never even saw the request. 
+*   **The Root Cause:** The initial panic was an architectural limit. We didn't hit one—the Spring Boot backend officially supports 2GB boundaries flawlessly. The problem was the Client Tool. Windows `curl.exe` violently crashes when it encounters commas `,` or parentheses `()` inside the `-F` parameter, misinterpreting them as network header delimiters.
+*   **The Fix:** Relying on shell string parsers for massive payloads is a terrible Developer Experience (DX). To shield non-technical users from this OS-level bug, I wrote a PowerShell watcher script that automatically copies incoming files to a sanitized `$env:TEMP` directory, uploads them, and deletes them, abstracting the broken client logic entirely.
 
 **2. Software Rot in Docker (`:latest`):**
-The MinIO bucket mysteriously vanished. *The Cause:* I had tagged the MinIO setup container with `minio/mc:latest`. The vendor released a silent update that deprecated and removed the `mc config host add` command in favor of `mc alias set`. The setup container went into an infinite crash loop trying to execute a command that no longer existed. *The Lesson:* Never use the `:latest` tag for infrastructure. Pin your versions.
+*   **The Symptom:** The MinIO bucket mysteriously vanished, and uploads started failing with `The specified bucket does not exist`.
+*   **The Root Cause:** I had tagged the MinIO setup container with `minio/mc:latest`. The vendor released a silent update that deprecated and removed the `mc config host add` command in favor of `mc alias set`. The setup container went into an infinite crash loop trying to execute a command that no longer existed. 
+*   **The Lesson:** Never use the `:latest` tag for infrastructure. Pin your exact versions.
 
 **3. The Unkillable Thread:**
-Attempting to stop the FastAPI server (`CTRL+C`) caused the terminal to hang indefinitely. I had launched the Kafka consumer inside `asyncio.get_event_loop().run_in_executor()` to prevent it from blocking the web server. However, when Uvicorn receives a `SIGINT`, it waits for background threads to finish. Because the Kafka thread is trapped in an infinite network-polling loop, it ignores the shutdown signal. In production, this requires passing a `threading.Event()` kill switch to the loop. 
+*   **The Symptom:** Attempting to stop the FastAPI server (`CTRL+C`) caused the terminal to hang indefinitely. 
+*   **The Root Cause:** I had launched the Kafka consumer inside `asyncio.get_event_loop().run_in_executor()` to prevent it from blocking the web server. However, when Uvicorn receives a `SIGINT`, it waits for background threads to finish. Because the Kafka thread is trapped in an infinite network-polling loop, it ignores the shutdown signal. 
+*   **The Fix:** In production, this requires passing a `threading.Event()` kill switch to the loop. 
 
 ---
 
