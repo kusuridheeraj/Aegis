@@ -12,7 +12,7 @@ Here is how I hardened the ML pipeline using Semantic Chunking, Dead Letter Queu
 
 ---
 
-### Bug 1: How 10MB Became 62MB
+### Structural Fracture 1: The 62MB Payload Explosion
 
 When the Python worker gets a Kafka event, it downloads the file using PyMuPDF. My original chunking code looked like this:
 `chunks = text.split(" ")`
@@ -68,6 +68,13 @@ That user's 10MB document was permanently dropped from the pipeline with no aler
 **The Fix (The Dead Letter Queue):**
 You cannot afford to drop events during database network timeouts. I implemented a Kafka **Dead Letter Queue (DLQ)** producer. Now, any failed embedding task catches the exception, wraps the original JSON event, the exact stack trace, and the distributed tracing `Correlation ID`, and pushes it to an `aegis.documents.failed` topic. 
 
+```python
+        except Exception as e:
+            error_details = str(e)
+            logger.error(f"[{correlation_id}] Failed to process document {object_id}: {error_details}")
+            send_to_dlq(correlation_id, event, error_details)
+```
+
 When ops teams bring the database back online, the DLQ is replayed. Zero data loss.
 
 **The Proof (A Chaos Test):**
@@ -107,6 +114,4 @@ The pipeline is now fault-tolerant, asynchronous, and heavily optimized.
 
 In Part 3, I will decouple the system from proprietary Chatbot GUIs (like Claude Desktop) by implementing Anthropic's **Model Context Protocol (MCP)**, turning the Qdrant vector database into a universal socket for autonomous LangGraph agents.
 
-📂 **[Full Code & Trace Metrics on GitHub](https://github.com/kusuridheeraj/Aegis)**idheeraj/Aegis)****Model Context Protocol (MCP)**, turning the Qdrant vector database into a universal socket for autonomous LangGraph agents.
-
-📂 **[Full Code & Trace Metrics on GitHub](https://github.com/kusuridheeraj/Aegis)**idheeraj/Aegis)**
+📂 **[Full Code & Trace Metrics on GitHub](https://github.com/kusuridheeraj/Aegis)**
