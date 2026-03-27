@@ -52,3 +52,13 @@ def store_vectors(object_id: str, chunks: list[str], embeddings: list[list[float
         collection_name=QDRANT_COLLECTION,
         points=points
     )
+
+def check_health() -> bool:
+    """Verifies that the Qdrant service is reachable."""
+    try:
+        # Simply fetching collections is a lightweight way to check connectivity
+        client.get_collections()
+        return True
+    except Exception as e:
+        logger.error(f"Qdrant Health Check Failed: {e}")
+        return False

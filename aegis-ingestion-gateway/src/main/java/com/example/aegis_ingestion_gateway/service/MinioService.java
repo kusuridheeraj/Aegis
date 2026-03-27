@@ -28,13 +28,22 @@ public class MinioService {
                 PutObjectArgs.builder()
                     .bucket(bucketName)
                     .object(objectId)
-                    .stream(inputStream, file.getSize(), -1)
-                    .contentType(file.getContentType())
-                    .build()
-            );
+                    .stream(file.getInputStream(), file.getSize(), -1)
+                    .contentType(file.getContentType() != null ? file.getContentType() : "application/octet-stream")
+                    .build());
         }
         
         log.info("Successfully uploaded file {} to MinIO as {}", file.getOriginalFilename(), objectId);
         return objectId;
+    }
+
+    public boolean checkHealth() {
+        try {
+            return minioClient.bucketExists(
+                io.minio.BucketExistsArgs.builder().bucket(bucketName).build());
+        } catch (Exception e) {
+            log.error("MinIO Health Check Failed: {}", e.getMessage());
+            return false;
+        }
     }
 }

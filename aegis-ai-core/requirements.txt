@@ -4,10 +4,15 @@ kafka-python-ng
 minio==7.2.5
 qdrant-client==1.8.0
 sentence-transformers==2.5.1
+onnxruntime
+optimum
 mcp
 pytest
 pytest-mock
 langchain-text-splitters
 langgraph
 langchain-core
+langchain-openai
+langchain-anthropic
+python-dotenv
 pymupdf

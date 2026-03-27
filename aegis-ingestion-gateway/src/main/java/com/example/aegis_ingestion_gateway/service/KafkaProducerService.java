@@ -17,4 +17,14 @@ public class KafkaProducerService {
         kafkaTemplate.send(TOPIC, event.getObjectId(), event);
         log.info("Published ingestion event to Kafka topic {} for objectId {}", TOPIC, event.getObjectId());
     }
+
+    public boolean checkHealth() {
+        try {
+            // Check if partitions exist for the topic as a lightweight health check
+            return !kafkaTemplate.partitionsFor(TOPIC).isEmpty();
+        } catch (Exception e) {
+            log.error("Kafka Health Check Failed: {}", e.getMessage());
+            return false;
+        }
+    }
 }

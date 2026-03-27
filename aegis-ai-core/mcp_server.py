@@ -1,21 +1,42 @@
 import asyncio
 import logging
+import os
+from pathlib import Path
+from dotenv import load_dotenv
+
+# Get absolute path of this script's directory
+current_dir = Path(__file__).parent.absolute()
+
+# Load environment variables with absolute path
+load_dotenv(dotenv_path=current_dir / ".env")
+
+# Configure logging to an absolute path
+log_file = current_dir / "aegis-mcp.log"
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler(log_file),
+        logging.StreamHandler() # Goes to stderr, safe for MCP stdio
+    ]
+)
+logger = logging.getLogger("aegis-mcp")
+logger.info(f"--- Aegis MCP Server starting up from {current_dir} ---")
+
 from mcp.server import Server
 from mcp.server.stdio import stdio_server
 from mcp.types import Tool, TextContent, CallToolResult
 from services.qdrant_service import client as qdrant_client
 from services.embedding_service import model
+from services import qdrant_service, minio_service
 from config import QDRANT_COLLECTION
-
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger("aegis-mcp")
 
 # Initialize the MCP Server
 app = Server("aegis-mcp")
 
 @app.list_tools()
 async def list_tools() -> list[Tool]:
-    """Exposes the search capability to any connecting AI agent."""
+    """Exposes the search and health capabilities to any connecting AI agent."""
     return [
         Tool(
             name="search_documents",
@@ -30,44 +51,58 @@ async def list_tools() -> list[Tool]:
                 },
                 "required": ["query"]
             }
+        ),
+        Tool(
+            name="check_aegis_health",
+            description="Checks the operational health of the Aegis infrastructure (MinIO, Qdrant, etc.). Use this if searches are failing.",
+            inputSchema={"type": "object", "properties": {}}
         )
     ]
 
 @app.call_tool()
 async def call_tool(name: str, arguments: dict) -> list[TextContent]:
     """Handles the execution of the tools exposed by the server."""
-    if name != "search_documents":
+    if name == "search_documents":
+        query = arguments.get("query")
+        if not query:
+            raise ValueError("Query argument is required.")
+            
+        logger.info(f"Received semantic search query: {query}")
+        
+        # 1. Convert the text query into a mathematical vector
+        query_vector = model.encode(query).tolist()
+        
+        # 2. Perform a high-speed cosine similarity search in Qdrant
+        search_result = qdrant_client.search(
+            collection_name=QDRANT_COLLECTION,
+            query_vector=query_vector,
+            limit=5 
+        )
+        
+        if not search_result:
+            return [TextContent(type="text", text="No relevant documents found.")]
+            
+        formatted_results = []
+        for hit in search_result:
+            # Extract text and metadata safely
+            payload = hit.payload or {}
+            chunk_text = payload.get('text', '[No text content available]')
+            source = payload.get('object_id', 'Unknown Source')
+            score = hit.score
+            
+            formatted_results.append(f"Source: {source}\nRelevance Score: {score:.4f}\nContent: {chunk_text}")
+            
+        return [TextContent(type="text", text="\n\n---\n\n".join(formatted_results))]
+
+    elif name == "check_aegis_health":
+        minio_ok = minio_service.check_health()
+        qdrant_ok = qdrant_service.check_health()
+        
+        status_msg = f"Aegis Infrastructure Status:\n- MinIO: {'ONLINE' if minio_ok else 'OFFLINE'}\n- Qdrant: {'ONLINE' if qdrant_ok else 'OFFLINE'}"
+        return [TextContent(type="text", text=status_msg)]
+    
+    else:
         raise ValueError(f"Unknown tool: {name}")
-    
-    query = arguments.get("query")
-    if not query:
-        raise ValueError("Query argument is required.")
-        
-    logger.info(f"Received semantic search query: {query}")
-    
-    # 1. Convert the text query into a mathematical vector
-    query_vector = model.encode(query).tolist()
-    
-    # 2. Perform a high-speed cosine similarity search in Qdrant
-    search_result = qdrant_client.search(
-        collection_name=QDRANT_COLLECTION,
-        query_vector=query_vector,
-        limit=5 # Return the top 5 most relevant chunks
-    )
-    
-    # 3. Format the results for the LLM
-    if not search_result:
-        return [TextContent(type="text", text="No relevant documents found in the database.")]
-        
-    formatted_results = []
-    for hit in search_result:
-        doc_name = hit.payload.get('object_id', 'Unknown Document')
-        chunk_text = hit.payload.get('text', '')
-        formatted_results.append(f"Source: {doc_name}\nContent: {chunk_text}")
-        
-    final_text = "\n\n---\n\n".join(formatted_results)
-    
-    return [TextContent(type="text", text=final_text)]
 
 async def main():
     """Runs the MCP server over standard input/output."""

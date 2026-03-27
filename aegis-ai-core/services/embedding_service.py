@@ -1,14 +1,22 @@
 import fitz  # PyMuPDF
 import logging
+import time
+import os
 from sentence_transformers import SentenceTransformer
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 logger = logging.getLogger(__name__)
 
-# Initialize the open-source embedding model locally.
-logger.info("Loading SentenceTransformer model...")
-model = SentenceTransformer('all-MiniLM-L6-v2')
-logger.info("Model loaded.")
+# Initialize the embedding model.
+# We force local_files_only=True to prevent the server from hanging on internet checks
+# during the critical MCP handshake window.
+logger.info("Loading SentenceTransformer model (all-MiniLM-L6-v2)...")
+try:
+    model = SentenceTransformer('all-MiniLM-L6-v2', local_files_only=True)
+    logger.info("Model loaded successfully from local cache.")
+except Exception as e:
+    logger.warning(f"Local model load failed, attempting download: {e}")
+    model = SentenceTransformer('all-MiniLM-L6-v2')
 
 def extract_text(file_bytes: bytes, filename: str) -> str:
     """Extracts raw text based on the file type."""

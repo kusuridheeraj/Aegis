@@ -24,8 +24,21 @@ public class DocumentController {
     private final KafkaProducerService kafkaProducerService;
 
     @GetMapping("/health")
-    public ResponseEntity<String> healthCheck() {
-        return ResponseEntity.ok("Gateway is healthy");
+    public ResponseEntity<?> healthCheck() {
+        boolean minioOk = minioService.checkHealth();
+        boolean kafkaOk = kafkaProducerService.checkHealth();
+        
+        Map<String, Object> response = Map.of(
+            "status", (minioOk && kafkaOk) ? "ok" : "degraded",
+            "service", "aegis-ingestion-gateway",
+            "dependencies", Map.of(
+                "minio", minioOk ? "healthy" : "unreachable",
+                "kafka", kafkaOk ? "healthy" : "unreachable"
+            )
+        );
+
+        return ResponseEntity.status((minioOk && kafkaOk) ? HttpStatus.OK : HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(response);
     }
 
     @PostMapping

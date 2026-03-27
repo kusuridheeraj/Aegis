@@ -42,3 +42,15 @@ def delete_document(object_id: str):
     except S3Error as e:
         logger.error(f"Failed to delete {object_id} from MinIO: {e}")
         raise
+
+def check_health() -> bool:
+    """Verifies that the MinIO service is reachable and the bucket exists."""
+    try:
+        # Check if bucket exists
+        if minio_client.bucket_exists(MINIO_BUCKET):
+            return True
+        logger.error(f"MinIO bucket '{MINIO_BUCKET}' does not exist.")
+        return False
+    except Exception as e:
+        logger.error(f"MinIO Health Check Failed: {e}")
+        return False
