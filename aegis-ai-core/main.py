@@ -6,11 +6,11 @@ from kafka_consumer import start_consuming
 from kafka import KafkaConsumer
 from dlq_replayer import replay_dlq
 from services import minio_service, qdrant_service
+from services.logging_service import setup_logger
 from config import KAFKA_BOOTSTRAP_SERVERS
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+# Configure logging using the new centralized service
+logger = setup_logger("aegis-ai", "aegis-ai")
 
 def check_kafka_health():
     """Lightweight check to see if Kafka brokers are reachable."""

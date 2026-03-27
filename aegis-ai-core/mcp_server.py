@@ -10,17 +10,9 @@ current_dir = Path(__file__).parent.absolute()
 # Load environment variables with absolute path
 load_dotenv(dotenv_path=current_dir / ".env")
 
-# Configure logging to an absolute path
-log_file = current_dir / "aegis-mcp.log"
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler(log_file),
-        logging.StreamHandler() # Goes to stderr, safe for MCP stdio
-    ]
-)
-logger = logging.getLogger("aegis-mcp")
+# Configure logging using the centralized service
+from services.logging_service import setup_logger
+logger = setup_logger("aegis-mcp", "aegis-mcp")
 logger.info(f"--- Aegis MCP Server starting up from {current_dir} ---")
 
 from mcp.server import Server
