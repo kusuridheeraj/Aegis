@@ -99,3 +99,37 @@ We documented the fundamental shift from **Linear Logic** to **Stateful Autonomy
 
 **The Hook:** LangGraph turns your AI from a "calculator" into a "coworker." It doesn't just search; it **thinks** about whether the search was successful before it talks back to you.
 
+---
+
+### War Story 8: The "Developer Instruction" 400 Error
+**Symptom:** The new Gemma 3 27B model threw an `openai.BadRequestError: Error code: 400` during the first LangGraph run.
+
+**The Root Cause:** 
+Google AI Studio's implementation of Gemma 3 via OpenRouter does not yet support the `developer` or `system` role in the chat completion API. Attempting to send a system instruction caused an `INVALID_ARGUMENT` exception.
+
+**The Staff-Level Fix:** 
+Implemented a **Prompt Rollback**. We converted all "System" messages into "User" messages with an `INSTRUCTION:` prefix. This ensured compatibility with bleeding-edge models that haven't fully implemented standard protocol roles yet.
+
+---
+
+### War Story 9: The "Semantic Noise" search failure
+**Symptom:** The agent searched for "Summarize Jennifer Doudna's discovery..." and found nothing relevant, even though the PDF was in the database.
+
+**The Root Cause:** 
+Vector search is sensitive to "Noise." Passing a full natural language question into the search engine often results in a poor cosine similarity match. The 384-dimensional space works best with high-density keywords, not conversational filler.
+
+**The Staff-Level Fix:** 
+Added a **Query Expansion Node** to the LangGraph. The agent now uses the LLM to "Reason" about the search terms first, converting the user's question into 3-5 high-impact keywords (e.g., `Jennifer Doudna CRISPR Cas9`) before hitting Qdrant.
+
+---
+
+### War Story 10: The "Optimum CLI" Version Bug
+**Symptom:** The `optimum-cli` tool failed with a `TypeError` regarding `model_kwargs`.
+
+**The Root Cause:** 
+A version mismatch between `optimum` and the local `sentence-transformers` library caused the CLI to pass invalid arguments to the model initializer. 
+
+**The Staff-Level Fix:** 
+Bypassed the CLI entirely and wrote a **Manual Python Export Script** using the `optimum.onnxruntime` Python API. This offered more control over the export process and successfully generated the 8-bit quantized weights.
+
+
