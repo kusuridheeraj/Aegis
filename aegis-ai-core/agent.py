@@ -1,175 +1,174 @@
+import os
 import logging
-import sys
-from typing import TypedDict, Annotated, List
+from typing import TypedDict, Annotated, List, Union
+from dotenv import load_dotenv
+
+from langchain_openai import ChatOpenAI
+from langchain_core.messages import BaseMessage, HumanMessage, AIMessage, SystemMessage
+from langchain_core.prompts import ChatPromptTemplate
 from langgraph.graph import StateGraph, END
-from services.embedding_service import model
+from langgraph.checkpoint.memory import MemorySaver
+
+# Internal Aegis Services
+from services.embedding_service import model as embedding_model
 from services.qdrant_service import client as qdrant_client
-from config import QDRANT_COLLECTION, OPENAI_API_KEY, ANTHROPIC_API_KEY, ANTHROPIC_BASE_URL, ANTHROPIC_MODEL
+from config import QDRANT_COLLECTION, ANTHROPIC_API_KEY, ANTHROPIC_BASE_URL, ANTHROPIC_MODEL
 
-# Attempt to import LLM providers
-try:
-    from langchain_openai import ChatOpenAI
-    from langchain_anthropic import ChatAnthropic
-    from langchain_core.messages import HumanMessage, SystemMessage
-except ImportError:
-    logger.warning("LLM libraries not fully installed. Falling back to Mock mode.")
+load_dotenv()
 
-logger = logging.getLogger("aegis-agent")
+logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
-# Define the state for our LangGraph Agent
+# Initialize the "Brain" using OpenRouter (Gemma 3 27B)
+# We use ChatOpenAI as a wrapper for OpenRouter compatibility
+llm = ChatOpenAI(
+    base_url=ANTHROPIC_BASE_URL,
+    api_key=ANTHROPIC_API_KEY,
+    model=ANTHROPIC_MODEL,
+    temperature=0.1
+)
+
+# --- 1. Define State ---
+
 class AgentState(TypedDict):
+    """The persistent state of our autonomous agent."""
     query: str
+    search_queries: List[str]
     context: str
-    reasoning: str
-    report: str
-    iteration: int
+    history: List[BaseMessage]
+    summary: str
+    iteration_count: int
+    is_sufficient: bool
+
+# --- 2. Define Nodes (The "Brain Cells") ---
+
+def generate_search_query(state: AgentState):
+    """Node: Analyzes the user query and generates optimized search terms."""
+    logger.info("Node: Generating optimized search queries...")
+    
+    prompt = ChatPromptTemplate.from_messages([
+        ("user", "INSTRUCTION: You are a search expert. Convert the user's question into 3 high-impact search terms for a vector database. Output ONLY the terms separated by commas. QUESTION: {query}")
+    ])
+    
+    chain = prompt | llm
+    response = chain.invoke({"query": state["query"]})
+    queries = [q.strip() for q in response.content.split(",")]
+    
+    return {
+        "search_queries": queries,
+        "iteration_count": state.get("iteration_count", 0) + 1
+    }
 
 def retrieve_context(state: AgentState):
-    """
-    Node: Semantic Search
-    Queries the local Qdrant Vector DB via mathematical vector similarity.
-    """
-    logger.info(f"--- NODE: RETRIEVAL ---")
-    logger.info(f"Querying Qdrant for: {state['query']}")
+    """Node: Pulls data from Qdrant using the generated queries."""
+    logger.info(f"Node: Retrieving context for queries: {state['search_queries']}")
     
-    # Generate vector for the user query
-    query_vector = model.encode(state['query']).tolist()
-    
-    # Perform search
-    search_result = qdrant_client.search(
-        collection_name=QDRANT_COLLECTION,
-        query_vector=query_vector,
-        limit=5 
-    )
-    
-    # Format the found chunks
-    context_parts = []
-    for hit in search_result:
-        text = hit.payload.get('text', '')
-        source = hit.payload.get('object_id', 'Unknown')
-        context_parts.append(f"SOURCE [{source}]:\n{text}")
-    
-    full_context = "\n\n---\n\n".join(context_parts)
-    return {"context": full_context, "iteration": state.get("iteration", 0) + 1}
-
-def analyze_and_reason(state: AgentState):
-    """
-    Node: Reasoning & Intelligence
-    Uses an LLM (if available) to synthesize the retrieved context into an answer.
-    """
-    logger.info(f"--- NODE: REASONING ---")
-    
-    context = state["context"]
-    query = state["query"]
-    
-    if not context.strip():
-        return {"reasoning": "No relevant data found in the Vector Database."}
-
-    llm = None
-    
-    # 1. OpenRouter Detection & Logic
-    # OpenRouter uses the OpenAI protocol for ALL models (Claude, Nemotron, etc.)
-    if ANTHROPIC_API_KEY and "openrouter.ai" in ANTHROPIC_BASE_URL:
-        logger.info(f"Using OpenRouter model '{ANTHROPIC_MODEL}'...")
-        # Ensure base_url is exactly 'https://openrouter.ai/api/v1' for ChatOpenAI
-        base_url = ANTHROPIC_BASE_URL.rstrip("/")
-        if not base_url.endswith("/v1"):
-            base_url += "/v1"
-            
-        llm = ChatOpenAI(
-            model=ANTHROPIC_MODEL,
-            api_key=ANTHROPIC_API_KEY,
-            base_url=base_url
+    all_context = []
+    for q in state["search_queries"]:
+        vector = embedding_model.encode(q).tolist()
+        hits = qdrant_client.search(
+            collection_name=QDRANT_COLLECTION,
+            query_vector=vector,
+            limit=2
         )
+        all_context.extend([h.payload.get("text") for h in hits])
     
-    # 2. Standard Anthropic Logic (Direct)
-    elif ANTHROPIC_API_KEY:
-        logger.info(f"Using direct Anthropic model '{ANTHROPIC_MODEL}'...")
-        llm = ChatAnthropic(
-            model=ANTHROPIC_MODEL, 
-            api_key=ANTHROPIC_API_KEY,
-            base_url=ANTHROPIC_BASE_URL
-        )
+    # Strategy C: Combine current hits with any existing summary
+    combined_context = f"PREVIOUS SUMMARY: {state.get('summary', 'None')}\n\nNEW CONTEXT:\n" + "\n---\n".join(set(all_context))
+    return {"context": combined_context}
+
+def evaluate_context(state: AgentState):
+    """Node: Checks if retrieved data actually answers the question (Self-Correction)."""
+    logger.info("Node: Evaluating context sufficiency...")
+    
+    # If we've tried 3 times, stop looping to avoid token waste
+    if state["iteration_count"] >= 3:
+        return {"is_sufficient": True}
         
-    # 3. Standard OpenAI Logic (Direct)
-    elif OPENAI_API_KEY:
-        logger.info("Using direct OpenAI (GPT-4o-mini)...")
-        llm = ChatOpenAI(model="gpt-4o-mini", api_key=OPENAI_API_KEY)
+    prompt = f"""
+    INSTRUCTION: Analyze the context below. Does it contain enough information to answer this question: '{state['query']}'?
+    Respond ONLY with 'YES' or 'NO'.
     
-    if llm:
-        system_prompt = (
-            "You are the Aegis Autonomous Intelligence Agent. Your job is to answer the user's "
-            "question using ONLY the provided document context from our enterprise Qdrant database. "
-            "If the answer is not in the context, say so. Be concise, technical, and professional."
-        )
-        user_prompt = f"CONTEXT:\n{context}\n\nUSER QUESTION: {query}"
-        
-        try:
-            response = llm.invoke([
-                SystemMessage(content=system_prompt),
-                HumanMessage(content=user_prompt)
-            ])
-            return {"reasoning": response.content}
-        except Exception as e:
-            logger.error(f"LLM Reasoning Failed: {e}")
-            return {"reasoning": f"Error during AI reasoning: {str(e)}"}
-    
-    # Fallback: Headless/Mock Reasoning (Useful for CI/CD or Local Dev without keys)
-    logger.warning("No API Keys found. Generating a structural summary instead of AI reasoning.")
-    mock_summary = f"Synthesized analysis of {len(context.split('---'))} retrieved document chunks."
-    return {"reasoning": mock_summary}
-
-def format_final_report(state: AgentState):
+    CONTEXT:
+    {state['context']}
     """
-    Node: Reporting
-    Formats the final output for delivery (e.g., to a Slack hook, email, or CLI).
-    """
-    logger.info(f"--- NODE: REPORTING ---")
     
-    report_header = "========================================\n"
-    report_header += "       AEGIS INTELLIGENCE REPORT        \n"
-    report_header += "========================================\n"
-    
-    final_report = f"{report_header}\nQUERY: {state['query']}\n\nANALYSIS:\n{state['reasoning']}\n\n[End of Report]"
-    return {"report": final_report}
+    response = llm.invoke([HumanMessage(content=prompt)])
+    is_ok = "YES" in response.content.upper()
+    return {"is_sufficient": is_ok}
 
-# Build the LangGraph
+def summarize_and_answer(state: AgentState):
+    """Node: Synthesizes the final answer and updates the rolling summary."""
+    logger.info("Node: Finalizing answer and updating summary...")
+    
+    # 1. Generate Final Answer
+    answer_prompt = f"""
+    INSTRUCTION: You are the Aegis Enterprise AI. Answer the question using the context provided.
+    QUESTION: {state['query']}
+    CONTEXT: {state['context']}
+    """
+    response = llm.invoke([HumanMessage(content=answer_prompt)])
+    
+    # 2. Strategy A: Generate a new summary for Strategy C storage
+    summary_prompt = f"INSTRUCTION: Summarize the key facts from this interaction for long-term memory: {response.content}"
+    new_summary = llm.invoke([HumanMessage(content=summary_prompt)]).content
+    
+    return {
+        "history": state["history"] + [HumanMessage(content=state["query"]), AIMessage(content=response.content)],
+        "summary": new_summary,
+        "is_sufficient": True
+    }
+
+# --- 3. Build Graph ---
+
 workflow = StateGraph(AgentState)
 
-# Add nodes to the graph
-workflow.add_node("retrieve", retrieve_context)
-workflow.add_node("reason", analyze_and_reason)
-workflow.add_node("report", format_final_report)
+workflow.add_node("planner", generate_search_query)
+workflow.add_node("retriever", retrieve_context)
+workflow.add_node("evaluator", evaluate_context)
+workflow.add_node("finalizer", summarize_and_answer)
 
-# Define the control flow (The State Machine)
-workflow.set_entry_point("retrieve")
-workflow.add_edge("retrieve", "reason")
-workflow.add_edge("reason", "report")
-workflow.add_edge("report", END)
+workflow.set_entry_point("planner")
+workflow.add_edge("planner", "retriever")
+workflow.add_edge("retriever", "evaluator")
 
-# Compile the autonomous agent
-autonomous_agent = workflow.compile()
+# The Self-Correction Loop
+workflow.add_conditional_edges(
+    "evaluator",
+    lambda x: "finalizer" if x["is_sufficient"] else "planner"
+)
+workflow.add_edge("finalizer", END)
 
-def run_agent_cli():
-    """CLI interface for the autonomous agent."""
-    if len(sys.argv) < 2:
-        print("\nUsage: python agent.py \"Your question here\"")
-        print("Example: python agent.py \"How does Aegis handle Dead Letter Queues?\"\n")
-        return
+# --- 4. Persistence Toggle (Redis vs Memory) ---
 
-    query = sys.argv[1]
-    print(f"\n[*] Aegis Agent waking up...")
-    print(f"[*] Objective: {query}")
-    
-    initial_state = {"query": query, "iteration": 0}
-    
-    # Execute the graph
+redis_url = os.getenv("REDIS_URL")
+if redis_url:
     try:
-        final_state = autonomous_agent.invoke(initial_state)
-        print("\n" + final_state["report"] + "\n")
-    except Exception as e:
-        logger.error(f"Agent Execution Failed: {e}")
+        from langgraph.checkpoint.postgres import PostgresSaver # Simplified for now
+        # Production Note: For true Redis persistence, we would use RedisSaver
+        # For this local prototype, we use the robust MemorySaver but scaffold the check
+        logger.info(f"Production Mode: Redis detected at {redis_url}")
+        checkpointer = MemorySaver() 
+    except:
+        checkpointer = MemorySaver()
+else:
+    logger.info("Development Mode: Using In-Memory Persistence.")
+    checkpointer = MemorySaver()
+
+# Compile the Brain
+aegis_brain = workflow.compile(checkpointer=checkpointer)
 
 if __name__ == "__main__":
-    run_agent_cli()
+    # Test the Autonomous Loop
+    config = {"configurable": {"thread_id": "test_session_1"}}
+    query = "What did Jennifer Doudna win in 2020?"
+    
+    print(f"\n--- Starting Autonomous Agent Run for: '{query}' ---")
+    final_state = aegis_brain.invoke(
+        {"query": query, "history": [], "summary": "", "iteration_count": 0},
+        config=config
+    )
+    
+    print("\n--- FINAL BRAIN RESPONSE ---")
+    print(final_state["history"][-1].content)
+    print(f"\n--- UPDATED LONG-TERM SUMMARY ---\n{final_state['summary']}")

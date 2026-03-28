@@ -1,67 +1,79 @@
 import time
-import os
 import psutil
-import torch
+import os
+import sys
 from sentence_transformers import SentenceTransformer
-from fast_sentence_transformers import FastSentenceTransformer
 
-def get_memory_usage():
+# Add AI core to path
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(os.path.join(BASE_DIR, 'aegis-ai-core'))
+
+def get_mem_usage():
     process = psutil.Process(os.getpid())
-    return process.memory_info().rss / (1024 * 1024)  # Convert to MB
+    return process.memory_info().rss / (1024 * 1024)  # MB
 
-def benchmark_model(model_name, model_class, chunks, is_quantized=False):
-    print(f"\n--- Benchmarking: {model_name} (Quantized={is_quantized}) ---")
+def run_benchmark():
+    from services.embedding_service import ONNX_PATH
     
-    start_mem = get_memory_usage()
+    # Use 100 chunks for a faster benchmark
+    test_text = "The quick brown fox jumps over the lazy dog."
+    test_chunks = [test_text] * 100 
     
-    # Load model
-    start_load = time.time()
-    if is_quantized:
-        model = model_class('all-MiniLM-L6-v2', device='cpu', quantize=True)
-    else:
-        model = model_class('all-MiniLM-L6-v2')
-    load_time = time.time() - start_load
+    print("\n--- Aegis Quantization Benchmark ---")
+    print(f"Testing with {len(test_chunks)} text chunks...")
+
+    # --- 1. Standard FP32 Benchmark ---
+    print("\n[1/2] Benchmarking Standard Model (FP32)...")
+    start_mem = get_mem_usage()
+    model_std = SentenceTransformer('all-MiniLM-L6-v2')
+    start_time = time.time()
+    model_std.encode(test_chunks)
+    std_duration = time.time() - start_time
+    load_mem = get_mem_usage() - start_mem
     
-    after_load_mem = get_memory_usage()
-    model_mem = after_load_mem - start_mem
+    print(f"FP32 RAM Usage: {load_mem:.2f} MB")
+    print(f"FP32 Processing Time: {std_duration:.2f} seconds")
+
+    # --- 2. 8-bit Quantized Benchmark ---
+    print("\n[2/2] Benchmarking 8-bit Quantized Model (INT8 via ONNX)...")
     
-    # Warm up
-    model.encode(["Warm up text"])
-    
-    # Benchmark Inference
-    start_inf = time.time()
-    embeddings = model.encode(chunks)
-    inf_time = time.time() - start_inf
-    
-    print(f"Model Load Time: {load_time:.2f}s")
-    print(f"RAM Usage: {model_mem:.2f} MB")
-    print(f"Inference Time ({len(chunks)} chunks): {inf_time:.4f}s")
-    print(f"Avg Time per Chunk: {(inf_time/len(chunks))*1000:.2f}ms")
-    
-    return {
-        "load_time": load_time,
-        "mem": model_mem,
-        "inf_time": inf_time
-    }
+    try:
+        from optimum.onnxruntime import ORTModelForFeatureExtraction
+        from transformers import AutoTokenizer
+        import torch
+        
+        # Load ONNX version
+        tokenizer = AutoTokenizer.from_pretrained(ONNX_PATH)
+        onnx_model = ORTModelForFeatureExtraction.from_pretrained(ONNX_PATH)
+        
+        start_mem_q = get_mem_usage()
+        start_time_q = time.time()
+        
+        # Optimized Batch Inference
+        encoded_input = tokenizer(test_chunks, padding=True, truncation=True, return_tensors="pt")
+        with torch.no_grad():
+            model_output = onnx_model(**encoded_input)
+        
+        # Perform mean pooling efficiently
+        attention_mask = encoded_input['attention_mask']
+        token_embeddings = model_output[0]
+        input_mask_expanded = attention_mask.unsqueeze(-1).expand(token_embeddings.size()).float()
+        sum_embeddings = torch.sum(token_embeddings * input_mask_expanded, 1)
+        sum_mask = torch.clamp(input_mask_expanded.sum(1), min=1e-9)
+        final_vectors = sum_embeddings / sum_mask
+        
+        quant_duration = time.time() - start_time_q
+        quant_mem = get_mem_usage() - start_mem_q
+        
+        print(f"INT8 RAM Usage: {quant_mem:.2f} MB")
+        print(f"INT8 Processing Time: {quant_duration:.2f} seconds")
+        
+        print("\n--- FINAL METRICS COMPARISON ---")
+        print(f"Speedup: {((std_duration/quant_duration)):.1f}x faster")
+        print(f"RAM Savings: {((1 - quant_mem/load_mem)*100):.0f}% reduction")
+        
+    except Exception as e:
+        print(f"[!] Quantized run failed: {e}")
 
 if __name__ == "__main__":
-    # Sample text chunks (Simulating a medium-sized document)
-    test_chunks = ["Aegis is a distributed enterprise RAG engine."] * 100
-    
-    print("Starting Aegis Quantization Benchmark...")
-    
-    # 1. Standard Precision
-    std_results = benchmark_model("Standard-Transformer", SentenceTransformer, test_chunks, False)
-    
-    # 2. 8-bit Quantized
-    quant_results = benchmark_model("Fast-Quantized-Transformer", FastSentenceTransformer, test_chunks, True)
-    
-    print("\n" + "="*40)
-    print("         FINAL COMPARISON           ")
-    print("="*40)
-    speedup = std_results['inf_time'] / quant_results['inf_time']
-    mem_saving = std_results['mem'] - quant_results['mem']
-    
-    print(f"Inference Speedup: {speedup:.2x} faster")
-    print(f"RAM Savings: {mem_saving:.2f} MB")
-    print("="*40)
+    run_benchmark()

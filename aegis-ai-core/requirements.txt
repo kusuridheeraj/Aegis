@@ -14,5 +14,10 @@ langgraph
 langchain-core
 langchain-openai
 langchain-anthropic
+langchain-community
 python-dotenv
 pymupdf
+redis
+optimum
+onnxruntime
+psutil

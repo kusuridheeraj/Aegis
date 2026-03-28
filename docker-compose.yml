@@ -135,6 +135,22 @@ services:
       - KAFKA_BOOTSTRAP_SERVERS=aegis-kafka:9092
       - MINIO_URL=aegis-minio:9000
       - QDRANT_URL=http://aegis-qdrant:6333
+      - REDIS_URL=redis://aegis-redis:6379
+    restart: on-failure
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  minio_data:
+  kafka_data:
+  qdrant_data:
+
+networks:
+  aegis-net:
+    driver: bridge//aegis-qdrant:6333
     restart: on-failure
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]

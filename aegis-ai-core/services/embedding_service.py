@@ -8,15 +8,47 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 logger = logging.getLogger(__name__)
 
 # Initialize the embedding model.
-# We force local_files_only=True to prevent the server from hanging on internet checks
-# during the critical MCP handshake window.
-logger.info("Loading SentenceTransformer model (all-MiniLM-L6-v2)...")
-try:
-    model = SentenceTransformer('all-MiniLM-L6-v2', local_files_only=True)
-    logger.info("Model loaded successfully from local cache.")
-except Exception as e:
-    logger.warning(f"Local model load failed, attempting download: {e}")
-    model = SentenceTransformer('all-MiniLM-L6-v2')
+# Hybrid Loading logic: Use Quantized ONNX if available, otherwise standard PyTorch.
+os.environ["TRANSFORMERS_OFFLINE"] = "1"
+ONNX_PATH = os.path.join(os.path.dirname(__file__), "..", "models", "all-MiniLM-L6-v2-onnx")
+
+logger.info("Initializing Aegis Embedding Engine...")
+
+if os.path.exists(ONNX_PATH):
+    try:
+        from optimum.onnxruntime import ORTModelForFeatureExtraction
+        from transformers import AutoTokenizer, pipeline
+        
+        logger.info(f"Loading 8-bit Quantized Model from {ONNX_PATH}...")
+        tokenizer = AutoTokenizer.from_pretrained(ONNX_PATH)
+        onnx_model = ORTModelForFeatureExtraction.from_pretrained(ONNX_PATH)
+        
+        # Wrap in a simple interface that matches SentenceTransformer.encode
+        class QuantizedTransformer:
+            def __init__(self, model, tokenizer):
+                self.pipeline = pipeline("feature-extraction", model=model, tokenizer=tokenizer)
+            
+            def encode(self, sentences):
+                # Returns the mean of the embeddings for the sentence
+                import torch
+                outputs = self.pipeline(sentences)
+                # Convert to list of lists
+                return [torch.tensor(o).mean(dim=1).squeeze().tolist() for o in outputs]
+
+        model = QuantizedTransformer(onnx_model, tokenizer)
+        logger.info("INT8 Quantized Model loaded successfully.")
+    except Exception as e:
+        logger.error(f"Failed to load Quantized model: {e}. Falling back to standard.")
+        model = SentenceTransformer('all-MiniLM-L6-v2')
+else:
+    logger.info("No quantized model found. Loading standard precision SentenceTransformer.")
+    try:
+        model = SentenceTransformer('all-MiniLM-L6-v2')
+        logger.info("Model loaded successfully from local cache.")
+    except Exception as e:
+        logger.warning(f"Local model load failed, attempting download: {e}")
+        os.environ["TRANSFORMERS_OFFLINE"] = "0"
+        model = SentenceTransformer('all-MiniLM-L6-v2')
 
 def extract_text(file_bytes: bytes, filename: str) -> str:
     """Extracts raw text based on the file type."""

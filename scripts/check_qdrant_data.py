@@ -1,40 +1,35 @@
-import logging
-from qdrant_client import QdrantClient
+import sys
 import os
-from dotenv import load_dotenv
 
-load_dotenv(dotenv_path="aegis-ai-core/.env")
+# Get absolute paths
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+AI_CORE_DIR = os.path.join(BASE_DIR, 'aegis-ai-core')
 
-QDRANT_URL = os.getenv("QDRANT_URL", "http://127.0.0.1:6333")
-QDRANT_COLLECTION = os.getenv("QDRANT_COLLECTION", "aegis_documents")
+# Add to path
+sys.path.append(AI_CORE_DIR)
+os.chdir(AI_CORE_DIR)
 
-client = QdrantClient(url=QDRANT_URL)
+from services.qdrant_service import client as qdrant_client
+from config import QDRANT_COLLECTION
 
-def check_qdrant():
-    print(f"Connecting to Qdrant at {QDRANT_URL}...")
-    try:
-        collections = client.get_collections().collections
-        print(f"Available Collections: {[c.name for c in collections]}")
+def check_data():
+    print(f"--- Checking Qdrant Collection: {QDRANT_COLLECTION} ---")
+    results, _ = qdrant_client.scroll(
+        collection_name=QDRANT_COLLECTION,
+        limit=5,
+        with_payload=True,
+        with_vectors=False
+    )
+    
+    if not results:
+        print("Collection is EMPTY.")
+        return
         
-        if QDRANT_COLLECTION not in [c.name for c in collections]:
-            print(f"ERROR: Collection '{QDRANT_COLLECTION}' does not exist.")
-            return
-
-        count = client.count(collection_name=QDRANT_COLLECTION)
-        print(f"Total Vectors in '{QDRANT_COLLECTION}': {count.count}")
-        
-        if count.count > 0:
-            print("\n--- SAMPLE PAYLOADS ---")
-            results = client.scroll(collection_name=QDRANT_COLLECTION, limit=3)
-            for record in results[0]:
-                print(f"ID: {record.id}")
-                print(f"Payload: {record.payload}")
-                print("-" * 20)
-        else:
-            print("\nNo data found in the collection. Have you uploaded any documents yet?")
-            
-    except Exception as e:
-        print(f"Error connecting to Qdrant: {e}")
+    print(f"Found {len(results)} sample records:")
+    for res in results:
+        print(f"\nID: {res.id}")
+        print(f"File: {res.payload.get('object_id')}")
+        print(f"Text Snippet: {res.payload.get('text')[:300]}...")
 
 if __name__ == "__main__":
-    check_qdrant()
+    check_data()
