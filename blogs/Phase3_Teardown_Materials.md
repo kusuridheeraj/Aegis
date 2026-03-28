@@ -36,7 +36,7 @@ Implemented **Path Hardening**. We used `Path(__file__).parent.absolute()` to pr
 **The Root Cause:** 
 MCP over `stdio` uses `stdout` for its communication. If you have a `print("Starting server...")` or a standard `logging.info()` that goes to `stdout`, that text gets mixed in with the protocol's JSON messages. The AI client sees the text, tries to parse it as JSON, fails, and crashes.
 
-The Staff-Level Fix:
+**The Staff-Level Fix:** 
 Redirected all server logging to a **Dedicated File Handler** and forced all console output to **`stderr`**. This keeps the "Protocol Pipe" (`stdout`) purely for JSON messages, while developers can still watch the raw logs in real-time via `aegis-mcp.log`.
 
 ---
@@ -69,22 +69,6 @@ We proved that our vector retrieval was flawless (retrieving Jennifer Doudna's d
 
 ---
 
-### War Story 7: The Quantization Hack (Squeezing AI onto a CPU)
-**The Problem:** Generating embeddings for massive PDF books was too slow on a standard CPU, creating a bottleneck in our real-time pipeline.
-
-**The Solution:** 
-We implemented **8-bit INT8 Quantization** via the `optimum` and `onnxruntime` libraries. We exported our PyTorch model to ONNX format and applied Level 3 optimizations.
-
-**The Real-World Metrics:**
-After stress-testing with a 100-chunk workload, we achieved:
-*   **3.8x Inference Speedup:** The pipeline now vectorizes text nearly 4 times faster than standard precision.
-*   **66% RAM Reduction:** Memory usage dropped from ~82MB to ~28MB, allowing the AI worker to run on extremely cheap, low-resource hardware.
-
-*The Architectural Insight:* A Staff Engineer doesn't just build a model; they optimize the model for the hardware it actually runs on.
-
-
----
-
 ### War Story 6: The "Coworker" Transition (Scripted Proxy vs. Autonomous Brain)
 **The Concept:** At the 72 LPA level, you don't build calculators; you build coworkers. We realized that our initial `headless_agent.py` was just a high-speed calculator. It followed a linear path and gave up if the math didn't match.
 
@@ -98,6 +82,21 @@ We documented the fundamental shift from **Linear Logic** to **Stateful Autonomy
 | **State** | Stateless. Forgets everything immediately. | **Stateful.** Remembers what it tried before to avoid loops. |
 
 **The Hook:** LangGraph turns your AI from a "calculator" into a "coworker." It doesn't just search; it **thinks** about whether the search was successful before it talks back to you.
+
+---
+
+### War Story 7: The Quantization Hack (Squeezing AI onto a CPU)
+**The Problem:** Generating embeddings for massive PDF books was too slow on a standard CPU, creating a bottleneck in our real-time pipeline.
+
+**The Solution:** 
+We implemented **8-bit INT8 Quantization** via the `optimum` and `onnxruntime` libraries. We exported our PyTorch model to ONNX format and applied Level 3 optimizations.
+
+**The Real-World Metrics:**
+After stress-testing with a 100-chunk workload, we achieved:
+*   **3.8x Inference Speedup:** The pipeline now vectorizes text nearly 4 times faster than standard precision.
+*   **66% RAM Reduction:** Memory usage dropped from ~82MB to ~28MB, allowing the AI worker to run on extremely cheap, low-resource hardware.
+
+*The Architectural Insight:* A Staff Engineer doesn't just build a model; they optimize the model for the hardware it actually runs on.
 
 ---
 
@@ -132,4 +131,46 @@ A version mismatch between `optimum` and the local `sentence-transformers` libra
 **The Staff-Level Fix:** 
 Bypassed the CLI entirely and wrote a **Manual Python Export Script** using the `optimum.onnxruntime` Python API. This offered more control over the export process and successfully generated the 8-bit quantized weights.
 
+---
 
+### War Story 11: The "Null Content-Type" Integration Crash
+**Symptom:** When using Python `requests` to test the Java Gateway, the upload failed with `java.lang.IllegalArgumentException: content type must not be null.`
+
+**The Root Cause:** 
+The MinIO Java client strictly requires a valid MIME type. Standard Python `requests` uploads often omit the `Content-Type` for individual file parts unless explicitly specified. The Java Gateway was blindly passing this null value to MinIO.
+
+**The Staff-Level Fix:** 
+Implemented **Fallback Logic** in the Java `MinioService`. We added a null-check that defaults the Content-Type to `application/octet-stream` if the client fails to provide one. 
+
+---
+
+### War Story 12: The "Software Rot" (MinIO Client Deprecation)
+**Symptom:** After a fresh Docker rebuild, the MinIO bucket creation script failed with `mc: <ERROR> config is not a recognized command.`
+
+**The Root Cause:** 
+The `minio/mc:latest` image received a silent vendor update that completely removed the `config host add` command in favor of the modern `alias set` command. Because the script used the `:latest` tag, the infrastructure broke overnight.
+
+**The Staff-Level Fix:** 
+Updated the `docker-compose.yml` to the modern syntax and pinned the architecture to specific, stable image versions to prevent "Silent Software Rot" in production environments.
+
+---
+
+### War Story 13: The "Windows Curl Parser" Bug
+**Symptom:** Uploading a file named `Book, Version 2 (Draft).pdf` failed silently with an empty response.
+
+**The Root Cause:** 
+Windows `curl.exe` uses a fragile string parser for the `-F` parameter. If a filename contains commas or parentheses, curl misinterprets them as network header delimiters and crashes before the request is ever sent. 
+
+**The Staff-Level Fix:** 
+Updated the **PowerShell Watcher Script** to copy any incoming file to a sanitized temporary name (`temp.bin`) in the `$env:TEMP` directory before uploading. This abstracts the OS-level parsing bugs away from the end-user.
+
+---
+
+### War Story 14: The "Kafka Configuration Validation" Loop
+**Symptom:** The Python AI worker logs were spammed with: `ERROR:main:Kafka Health Check Failed: KafkaConfigurationError: connections_max_idle_ms must be larger than request_timeout_ms.`
+
+**The Root Cause:** 
+The `kafka-python` client has strict internal validation rules for timeout parameters. During the implementation of the Health Check loop, we set these values to be equal, triggering a validation crash on every heartbeat.
+
+**The Staff-Level Fix:** 
+Adjusted the Kafka consumer configuration to ensure `connections_max_idle_ms` (5000ms) is strictly larger than the request timeout, silencing the noise and stabilizing the health monitoring loop.
