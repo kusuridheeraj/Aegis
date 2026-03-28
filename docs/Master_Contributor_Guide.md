@@ -25,11 +25,13 @@ We never send the actual file through Kafka. Kafka is for small messages, not 1G
 
 ## 🔄 2. The Data Lifecycle (End-to-End)
 
-1.  **Detection:** The File Watcher sees a new PDF in the `input_pdfs/` folder.
-2.  **Ingestion (Java):** Streams the bytes to MinIO and publishes a `DocumentIngestedEvent` to Kafka. Returns HTTP 202 (Accepted) immediately.
+1.  **Detection:** We provide multiple ways to ingest data:
+    *   **The File Watcher:** Monitors `input_pdfs/` for real-time streaming.
+    *   **The Batch Uploader:** Use `.\scripts\upload_folder.ps1` to ingest entire directories of books.
+2.  **Ingestion (Java):** Supports **PDF** and **EPUB** formats. Streams bytes to MinIO and publishes events to Kafka.
 3.  **Transformation (Python):**
-    *   **LangChain:** We use `RecursiveCharacterTextSplitter`. Unlike a naive `.split()`, LangChain understands logical boundaries (paragraphs, sentences) so the AI doesn't lose context.
-    *   **HuggingFace:** Converts the text chunks into 384-dimensional mathematical vectors.
+    *   **PyMuPDF (fitz):** Robust text extraction for both PDFs and EPUBs.
+    *   **LangChain:** Semantic chunking using `RecursiveCharacterTextSplitter`.
 4.  **Storage:** Vectors are stored in **Qdrant**, our high-performance vector database.
 5.  **Garbage Collection:** Once indexed, Python deletes the raw file from MinIO to keep storage costs at $0.
 

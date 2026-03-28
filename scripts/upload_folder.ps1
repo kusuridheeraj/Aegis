@@ -3,38 +3,42 @@ param (
     [string]$FolderPath
 )
 
-if (-Not (Test-Path $FolderPath)) {
-    Write-Host "Error: Folder '$FolderPath' does not exist." -ForegroundColor Red
+if (-not (Test-Path $FolderPath)) {
+    Write-Host "Error: Folder '$FolderPath' not found." -ForegroundColor Red
     exit 1
 }
 
-# Get all relevant files in the folder (PDFs, Logs, Code, Data)
-$extensions = "*.pdf", "*.txt", "*.log", "*.md", "*.py", "*.java", "*.csv", "*.json"
-$files = Get-ChildItem -Path $FolderPath -Include $extensions -Recurse
+$files = Get-ChildItem -Path $FolderPath -Include *.pdf, *.epub -Recurse
 
-if ($files.Count -eq 0) {
-    Write-Host "No valid documents found in $FolderPath" -ForegroundColor Yellow
-    exit 0
-}
-
-Write-Host "Found $($files.Count) files. Beginning batch ingestion to Aegis..." -ForegroundColor Cyan
+Write-Host "--- Aegis Batch Ingestion Started ---" -ForegroundColor Cyan
+Write-Host "Found $($files.Count) files in '$FolderPath'" -ForegroundColor Yellow
 
 foreach ($file in $files) {
-    # Extract the relative path and convert backslashes to forward slashes
-    $relPath = $file.FullName.Substring($FolderPath.Length).TrimStart('\', '/')
-    $relPath = $relPath -replace '\\', '/'
+    Write-Host "`n[UPLOADING] $($file.Name)..." -NoNewline
     
-    Write-Host "Uploading: $relPath..." -NoNewline
+    # We use a completely safe temporary name for the DISK path to avoid curl parsing bugs
+    $guid = [guid]::NewGuid().ToString()
+    $safeTempPath = Join-Path $env:TEMP "aegis_tmp_$guid.bin"
+    Copy-Item -Path $file.FullName -Destination $safeTempPath -Force
     
-    # Fire the curl command, explicitly overriding the filename to include the directory path
-    $response = curl.exe -s -X POST -F "file=@$($file.FullName);filename=$relPath" http://localhost:8080/api/v1/documents
-    
-    if ($response -match '"status":"accepted"') {
-        Write-Host " [SUCCESS]" -ForegroundColor Green
-    } else {
-        Write-Host " [FAILED]" -ForegroundColor Red
-        Write-Host "Response: $response" -ForegroundColor DarkGray
+    # Aggressive sanitization for the FILENAME header sent to the server
+    $safeFilename = $file.Name -replace '[^a-zA-Z0-9.]', '_'
+    $safeFilename = $safeFilename -replace '__+', '_'
+
+    try {
+        $response = curl.exe -s -X POST -F "file=@$safeTempPath;filename=$safeFilename" http://localhost:8080/api/v1/documents
+        
+        if ($response -match '"status":"accepted"') {
+            Write-Host " [ACCEPTED]" -ForegroundColor Green
+        } else {
+            Write-Host " [FAILED]" -ForegroundColor Red
+            Write-Host "Response: $response" -ForegroundColor DarkGray
+        }
+    } catch {
+        Write-Host " [ERROR] Gateway Offline" -ForegroundColor Red
+    } finally {
+        if (Test-Path $safeTempPath) { Remove-Item $safeTempPath -Force }
     }
 }
 
-Write-Host "`nBatch ingestion complete! The Python AI worker is now processing the queue in the background." -ForegroundColor Cyan
+Write-Host "`n--- Batch Ingestion Complete ---" -ForegroundColor Cyan

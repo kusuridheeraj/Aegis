@@ -56,8 +56,9 @@ def extract_text(file_bytes: bytes, filename: str) -> str:
     filename_lower = filename.lower()
     
     try:
-        if filename_lower.endswith(".pdf"):
-            with fitz.open(stream=file_bytes, filetype="pdf") as doc:
+        if filename_lower.endswith(".pdf") or filename_lower.endswith(".epub"):
+            filetype = "pdf" if filename_lower.endswith(".pdf") else "epub"
+            with fitz.open(stream=file_bytes, filetype=filetype) as doc:
                 for page in doc:
                     text += page.get_text("text") + "\n"
         else:
