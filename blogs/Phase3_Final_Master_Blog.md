@@ -43,15 +43,17 @@ During initial integration, the MCP client terminated connections due to a timeo
 
 ### 2. Decision Logic: Autonomous State Machines via LangGraph
 
-I replaced linear retrieval logic with a cyclic state machine using **LangGraph**. This allows the agent to handle low-confidence search results through a self-correction loop.
+### 2. Decision Logic: Solving State Decay with LangGraph
 
-**The Autonomous Loop Architecture:**
-1.  **Query Planning Node:** Optimizes the user input into specific search keywords.
-2.  **Retrieval Node:** Interfaces with the Qdrant vector space.
-3.  **Evaluation Node:** Analyzes the retrieved chunks for semantic relevance. If the confidence score is low, it triggers a **conditional edge** back to the Planner.
-4.  **Synthesis Node:** Generates the final response and persists a long-term summary to Redis.
+Standard RAG implementations typically rely on linear chains (Directed Acyclic Graphs). The fundamental flaw in this approach is **Linear State Decay**: if the initial retrieval step returns low-relevance noise, the subsequent synthesis step is guaranteed to hallucinate. There is no mechanism for the system to "backtrack."
 
-**Implementation Detail (Self-Correction):**
+I replaced this linear logic with a cyclic state machine using **LangGraph**. By introducing a **Recursive Re-entry Point**, the architecture can manage non-linear logic flows:
+1.  **Query Planner:** Expands user intent into multidimensional search terms.
+2.  **Vector Retriever:** Interfaces with the Qdrant HNSW index.
+3.  **Semantic Grader:** Evaluates context density and distance scores.
+4.  **The Self-Correction Loop:** If the grader identifies insufficient context, it triggers a conditional edge back to the Planner, carrying the failure metadata to refine the next search strategy.
+
+**Implementation Detail (Autonomous Retry):**
 ```python
 # Implementation of the conditional logic for autonomous retry
 workflow.add_conditional_edges(
@@ -64,13 +66,16 @@ workflow.add_conditional_edges(
 
 ### 3. Hardware Optimization: INT8 Scalar Quantization
 
-Generating embeddings for large-scale technical libraries on standard CPU hardware introduces significant latency. I implemented **INT8 Scalar Quantization** using the `optimum` and `onnxruntime` libraries to improve throughput without a linear increase in resource allocation.
+Executing high-dimensional vector inference on standard CPU hardware is a known bottleneck due to the computational overhead of 32-bit floating-point (FP32) math. I implemented **INT8 Scalar Quantization** using the `optimum` and `onnxruntime` libraries to move the bottleneck from the CPU to the I/O bus.
 
-This creates a **Resource Optimization Flywheel**: by compressing 32-bit weights into 8-bit integers, we reduce the memory overhead by 66%. This reduction in RAM usage allows for larger batch sizes and higher-speed parallel inference, essentially allowing the system to do more work with fewer physical resources.
+**The Technical Mechanism:**
+Quantization maps the FP32 weights of the model into a constrained 8-bit integer space. This reduces the memory footprint by 66% and allows the CPU to utilize **SIMD (Single Instruction, Multiple Data)** instructions for integer arithmetic. This shifts the workload from complex floating-point units to high-speed integer units, resulting in a dramatic throughput increase.
 
 **Performance Metrics:**
-*   **3.8x Throughput Increase:** Vectorization speed improved by nearly 300%.
+*   **3.8x Throughput Increase:** Vectorization speed improved by nearly 300% on identical hardware.
 *   **66% Memory Optimization:** RAM footprint reduced from ~82MB to ~28MB per worker process.
+
+This ensures the Aegis AI Core remains viable on cost-efficient, low-resource nodes in a distributed cluster.
 
 This ensures the Aegis AI Core remains viable on cost-efficient, low-resource nodes in a distributed cluster.
 
