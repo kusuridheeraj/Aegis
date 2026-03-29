@@ -93,9 +93,9 @@ To validate the system's resilience under sustained load, I ingested a technical
 
 ### 🛡️ Production Edge Cases: Distributed Failure Modes
 
-1.  **Windows Path Parser Constraint:** Standard `curl` implementations crash when processing local file paths containing commas or brackets. I mitigated this by implementing a GUID-based atomic file copy in the batch uploader.
-2.  **Infrastructure Software Rot:** Using the `:latest` tag for Docker images led to a failure in bucket creation when a vendor deprecated a CLI command overnight. **Lesson: All infrastructure images must be version-pinned.**
-3.  **Protocol Stream Corruption:** MCP utilizes `stdout` for communication. Standard debug prints will corrupt the protocol stream. I redirected all logging to a dedicated file handler and forced console output to `stderr`.
+1.  **Windows Path Parser Constraint:** Standard `curl` implementations crash when processing local file paths containing commas or brackets (e.g., `System Design (Alex Xu).pdf`). I mitigated this by implementing a GUID-based atomic file copy in the batch uploader to ensure OS-level naming immunity.
+2.  **Infrastructure Software Rot:** Using the `:latest` tag for Docker images led to a failure in bucket creation when a vendor deprecated a CLI command overnight. **Lesson: All infrastructure images must be version-pinned to ensure deterministic deployments.**
+3.  **Protocol Stream Corruption (The print() Trap):** MCP utilizes `stdout` as its primary data channel for JSON-RPC messages. Adding a single `print("Server started")` statement for debugging injects raw text into the protocol stream, causing the AI client to fail parsing and immediately disconnect. I redirected all application logging to a dedicated file handler and forced console output to `stderr` to keep the protocol pipe sterile.
 
 ---
 
