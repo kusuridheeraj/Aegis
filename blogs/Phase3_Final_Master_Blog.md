@@ -7,15 +7,11 @@
 
 ---
 
-In the previous phases of Project Aegis, I detailed the implementation of an enterprise-grade ingestion pipeline capable of streaming large-scale payloads (1GB+) into MinIO and Kafka with sub-second latency. However, high-throughput ingestion is only one half of the distributed RAG problem. 
+High-throughput ingestion is only half the battle. The real bottleneck in production RAG systems is the **Retrieval Layer**. 
 
-The primary bottleneck in modern RAG systems is the **Retrieval Layer**. 
+Most standard implementations rely on static scripts that fail when semantic overlap is low. For the final phase of Project Aegis, I transitioned the architecture toward **Autonomous State Machines** using LangGraph, MCP, and INT8 Quantization. 
 
-Most standard implementations rely on deterministic, linear scripts—what I term "Calculators." They perform a single search operation and, if the semantic overlap is insufficient, fail to provide context to the LLM. 
-
-For the final phase of Project Aegis, I transitioned the architecture toward **Autonomous State Machines**. An Autonomous State Machine is a logic framework that manages its own execution flow through a cycle of states (Reasoning, Action, and Evaluation). By integrating **LangGraph**, the **Model Context Protocol (MCP)**, and **INT8 Quantization**, I engineered a system that proactively evaluates its own retrieval success and self-corrects until the required data density is achieved.
-
-Here is the technical post-mortem of the consumption layer hardening.
+Here is the technical post-mortem of how I built a system that evaluates its own search results and self-corrects until it achieves the required data density.
 
 ---
 
