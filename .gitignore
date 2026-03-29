@@ -1,6 +1,7 @@
 # Project Aegis Root gitignore
 
 # Ignore generated test payload files
+input_pdfs/
 *.bin
 benchmark_files/
 test_files/
