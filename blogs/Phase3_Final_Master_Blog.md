@@ -23,7 +23,8 @@ Hardcoding provider-specific API calls creates high technical debt and architect
 *   **Data Sovereignty:** Technical documentation remains within the local network boundary. The LLM only interacts with the standardized tool definitions exposed via the protocol.
 *   **Automated Health Monitoring:** The MCP server includes a diagnostic tool that allows the interface to verify the status of MinIO and Qdrant clusters during search failures.
 
-**Case Study: Resolving the Handshake Race Condition**
+### Handshake Latency and Protocol Timeouts
+
 During initial integration, the MCP client terminated connections due to a timeout. Investigation revealed the Python server was taking **13.5 seconds** to initialize because the model loader was performing synchronous internet checks. The MCP protocol enforces a strict **10-second handshake limit**.
 *   **The Resolution:** I enforced `local_files_only=True` and implemented absolute path resolution for configuration files. This reduced initialization time to **0.4 seconds**, ensuring a stable handshake.
 
