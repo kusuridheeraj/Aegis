@@ -1,4 +1,5 @@
-# Why your RAG Pipeline is a Black Box (And how I built an Autonomous Oracle)
+# Beyond Chatbots: Engineering an Autonomous AI "Coworker" that Corrects Its Own Failures
+## Decoupling Retrieval from Synthesis with MCP and LangGraph
 
 *Part 3 of the Aegis series. [Read Part 2 here](Blog2_Embedding_Pipeline.md) — how I hardened the ML pipeline against silent data loss and 62MB payload explosions.*
 
