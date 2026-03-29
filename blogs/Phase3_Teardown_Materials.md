@@ -166,11 +166,32 @@ Updated the **PowerShell Watcher Script** to copy any incoming file to a sanitiz
 
 ---
 
-### War Story 14: The "Kafka Configuration Validation" Loop
-**Symptom:** The Python AI worker logs were spammed with: `ERROR:main:Kafka Health Check Failed: KafkaConfigurationError: connections_max_idle_ms must be larger than request_timeout_ms.`
+### War Story 15: The "Windows Path Comma" Nightmare
+**Symptom:** During batch ingestion of 10 System Design books, `curl.exe` returned empty responses and failed to upload 70% of the library.
 
 **The Root Cause:** 
-The `kafka-python` client has strict internal validation rules for timeout parameters. During the implementation of the Health Check loop, we set these values to be equal, triggering a validation crash on every heartbeat.
+While we previously fixed commas in the *headers*, we discovered that Windows `curl.exe` also crashes if the actual **File System Path** containing the binary contains commas or parentheses. Because the books were named `System Design (Alex Xu).pdf`, curl misparsed the local file path before the request was ever formed.
 
 **The Staff-Level Fix:** 
-Adjusted the Kafka consumer configuration to ensure `connections_max_idle_ms` (5000ms) is strictly larger than the request timeout, silencing the noise and stabilizing the health monitoring loop.
+Implemented a **GUID-based Atomic Copy** in the batch script. The script now copies each file to a perfectly safe temporary name (e.g., `aegis_tmp_guid.bin`), uploads it, and then purges the temp file. This makes the ingestion gateway 100% immune to OS-level naming restrictions.
+
+---
+
+### War Story 16: The "Extension Blind Spot" (EPUB Support)
+**Symptom:** The pipeline worked perfectly for PDFs but ignored technical books in `.epub` format.
+
+**The Root Cause:** 
+The extraction logic in `embedding_service.py` was hardcoded to check for the `.pdf` extension. 
+
+**The Staff-Level Fix:** 
+Decoupled the text extractor and leveraged PyMuPDF's multi-format engine. We updated the logic to dynamically detect and process both PDF and EPUB streams using the same semantic chunking pipeline, effectively doubling the system's "IQ" for engineering libraries.
+
+---
+
+### 🛡️ Final Data Verification Matrix
+Before closing Phase 3, we verified data integrity across all 4 distributed sources:
+1.  **Ingestion Edge (Java):** Verified sub-second handoff for 40MB+ payloads.
+2.  **Object Storage (MinIO):** Verified **Garbage Collection**. MinIO bucket is verified at 0 bytes post-indexing.
+3.  **Message Bus (Kafka):** Verified async distribution of 10 concurrent heavy-load events.
+4.  **Vector DB (Qdrant):** Verified persistence of thousands of vectors with a 0.7+ relevance score across multiple book formats.
+

@@ -65,7 +65,9 @@ def retrieve_context(state: AgentState):
     
     all_context = []
     for q in state["search_queries"]:
-        vector = embedding_model.encode(q).tolist()
+        # Our quantized wrapper returns a list of lists (one per sentence)
+        vectors = embedding_model.encode([q])
+        vector = vectors[0]
         hits = qdrant_client.search(
             collection_name=QDRANT_COLLECTION,
             query_vector=vector,
@@ -159,9 +161,9 @@ else:
 aegis_brain = workflow.compile(checkpointer=checkpointer)
 
 if __name__ == "__main__":
-    # Test the Autonomous Loop
-    config = {"configurable": {"thread_id": "test_session_1"}}
-    query = "What did Jennifer Doudna win in 2020?"
+    # Test the Autonomous Loop with a complex multi-concept question
+    config = {"configurable": {"thread_id": "test_session_final"}}
+    query = "Compare Leader-based replication with Multi-leader and Leaderless strategies. What are the trade-offs?"
     
     print(f"\n--- Starting Autonomous Agent Run for: '{query}' ---")
     final_state = aegis_brain.invoke(
