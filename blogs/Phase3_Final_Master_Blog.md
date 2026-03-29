@@ -1,4 +1,5 @@
 # Beyond Chatbots: Engineering an Autonomous AI "Coworker" that Corrects Its Own Failures
+## Decoupling Retrieval from Synthesis with MCP and LangGraph
 
 In the previous phases of the Aegis project, I detailed the implementation of an enterprise-grade ingestion pipeline capable of streaming large-scale payloads (1GB+) into MinIO and Kafka with sub-second latency. However, high-throughput ingestion is only one half of the distributed RAG problem. 
 
