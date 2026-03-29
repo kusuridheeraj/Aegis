@@ -41,8 +41,6 @@ During initial integration, the MCP client terminated connections due to a timeo
 
 ---
 
-### 2. Decision Logic: Autonomous State Machines via LangGraph
-
 ### 2. Decision Logic: Solving State Decay with LangGraph
 
 Standard RAG implementations typically rely on linear chains (Directed Acyclic Graphs). The fundamental flaw in this approach is **Linear State Decay**: if the initial retrieval step returns low-relevance noise, the subsequent synthesis step is guaranteed to hallucinate. There is no mechanism for the system to "backtrack."
@@ -74,8 +72,6 @@ Quantization maps the FP32 weights of the model into a constrained 8-bit integer
 **Performance Metrics:**
 *   **3.8x Throughput Increase:** Vectorization speed improved by nearly 300% on identical hardware.
 *   **66% Memory Optimization:** RAM footprint reduced from ~82MB to ~28MB per worker process.
-
-This ensures the Aegis AI Core remains viable on cost-efficient, low-resource nodes in a distributed cluster.
 
 This ensures the Aegis AI Core remains viable on cost-efficient, low-resource nodes in a distributed cluster.
 
