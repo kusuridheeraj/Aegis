@@ -19,6 +19,8 @@ Here is the technical post-mortem of the consumption layer hardening.
 
 Hardcoding provider-specific API calls creates high technical debt and architectural lock-in. I implemented Anthropic’s **Model Context Protocol (MCP)** to abstract the database interaction into a standardized "Universal Socket." 
 
+In this context, a **Standardized Protocol Handshake** is the initial negotiation phase where the AI client and our server exchange capabilities and register tools. This handshake must be completed within a strict temporal window (the protocol's timeout limit) to establish a stable communication link.
+
 **Infrastructure Benefits of MCP:**
 *   **Decoupled Portability:** The Aegis database can be interfaced by Claude Desktop, custom internal tools, or diverse LangGraph agents without modifying the core retrieval logic.
 *   **Data Sovereignty:** Technical documentation remains within the local network boundary. The LLM only interacts with the standardized tool definitions exposed via the protocol.
